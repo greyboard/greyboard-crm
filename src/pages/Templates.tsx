@@ -359,13 +359,11 @@ export function Templates() {
   function startEdit(t: EmailTemplate) {
     setDraft({ name: t.name, industry: t.industry, country: t.country, subject: t.subject, pre_header: t.pre_header, body: t.body })
     setEditingId(t.id)
-    setSaved(false)
   }
 
   function startNew() {
     setDraft(emptyTemplate())
     setEditingId('new')
-    setSaved(false)
   }
 
   function cancelEdit() {
