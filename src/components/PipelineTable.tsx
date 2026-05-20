@@ -31,9 +31,6 @@ export function PipelineTable({
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
       <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-3 flex-wrap">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 shrink-0">
-          Rezente Pipeline
-        </h2>
         <div className="flex items-center gap-2 flex-1 flex-wrap">
           <select value={filterCountry} onChange={e => onFilterCountry(e.target.value)} className={selectCls}>
             <option value="">Alle Länder</option>

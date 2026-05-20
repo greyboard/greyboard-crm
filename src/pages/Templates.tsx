@@ -17,11 +17,6 @@ interface EmailTemplate {
   body: string
 }
 
-const INDUSTRIES = [
-  'Gartenbau','Fliesenleger','Gipser','Bodenleger','Glaser',
-  'Dachdecker','Sanitär','Elektriker','Maler','Schreiner','Sonstige',
-]
-
 const COUNTRY_NAMES: Record<string, string> = {
   CH: 'Schweiz', LI: 'Liechtenstein', DE: 'Deutschland', AT: 'Österreich',
 }
@@ -337,6 +332,7 @@ export function Templates() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [countries, setCountries] = useState<string[]>([])
+  const [industries, setIndustries] = useState<string[]>([])
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null)
 
   useEffect(() => {
@@ -344,6 +340,10 @@ export function Templates() {
     supabase.from('leads').select('country').neq('country', null).then(({ data }) => {
       const unique = [...new Set((data ?? []).map((r: any) => r.country).filter(Boolean))].sort()
       setCountries(unique)
+    })
+    supabase.from('leads').select('industry').neq('industry', null).then(({ data }) => {
+      const unique = [...new Set((data ?? []).map((r: any) => r.industry).filter(Boolean))].sort()
+      setIndustries(unique)
     })
   }, [])
 
@@ -466,7 +466,7 @@ export function Templates() {
                 className={selectCls}
               >
                 <option value="">Alle Branchen</option>
-                {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                {industries.map(i => <option key={i} value={i}>{i}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1">
