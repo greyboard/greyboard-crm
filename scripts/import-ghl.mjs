@@ -68,7 +68,7 @@ function mapContact(c) {
     ghl_date_added:    c.dateAdded     || null,
     ghl_date_updated:  c.dateUpdated   || null,
     last_action_at:    c.dateUpdated   || c.dateAdded || new Date().toISOString(),
-    status:            'Neu',
+    status:            cf(c, CF_EISBRECHER) ? 'Validiert' : 'Neu',
   }
 }
 

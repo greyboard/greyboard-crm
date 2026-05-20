@@ -234,9 +234,13 @@ export function Kontakte() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {lead.country
-                        ? lead.state ? `${lead.country} / ${lead.state}` : lead.country
-                        : '–'}
+                      {(() => {
+                        if (!lead.country) return '–'
+                        const name = COUNTRY_NAMES[lead.country] ?? lead.country
+                        const state = lead.state
+                        if (!state || state === name) return name
+                        return `${name} / ${state}`
+                      })()}
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
