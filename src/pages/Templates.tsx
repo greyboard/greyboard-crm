@@ -37,6 +37,7 @@ const PLACEHOLDERS: [string, string][] = [
   ['{{email}}',        'E-Mail'],
   ['{{phone}}',        'Telefon'],
   ['{{city}}',         'Stadt'],
+  ['{{state}}',        'Kanton / Bundesland'],
   ['{{icebreaker}}',   'Eisbrecher-Text'],
   ['{{id}}',           'Contact ID'],
   ['{{ghl_id}}',       'GHL ID'],
