@@ -340,18 +340,40 @@ export function Templates() {
   const [countries, setCountries] = useState<string[]>([])
   const [industries, setIndustries] = useState<string[]>([])
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null)
+  const [leadCountMap, setLeadCountMap] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
     fetchTemplates()
-    supabase.from('leads').select('country').neq('country', null).then(({ data }) => {
-      const unique = [...new Set((data ?? []).map((r: any) => r.country).filter(Boolean))].sort()
-      setCountries(unique)
-    })
-    supabase.from('leads').select('industry').neq('industry', null).then(({ data }) => {
-      const unique = [...new Set((data ?? []).map((r: any) => r.industry).filter(Boolean))].sort()
-      setIndustries(unique)
+    supabase.from('leads').select('country, industry').then(({ data }) => {
+      if (!data) return
+      const map = new Map<string, number>()
+      for (const row of data as any[]) {
+        const key = `${row.country ?? ''}|${row.industry ?? ''}`
+        map.set(key, (map.get(key) ?? 0) + 1)
+      }
+      setLeadCountMap(map)
+      const uniqueCountries = [...new Set(data.map((r: any) => r.country).filter(Boolean))].sort()
+      const uniqueIndustries = [...new Set(data.map((r: any) => r.industry).filter(Boolean))].sort()
+      setCountries(uniqueCountries)
+      setIndustries(uniqueIndustries)
     })
   }, [])
+
+  function getLeadCount(t: EmailTemplate): number {
+    if (t.country === null && t.industry === null) {
+      let total = 0; leadCountMap.forEach(v => total += v); return total
+    }
+    if (t.country !== null && t.industry !== null) {
+      return leadCountMap.get(`${t.country}|${t.industry}`) ?? 0
+    }
+    let total = 0
+    leadCountMap.forEach((v, k) => {
+      const [c, i] = k.split('|')
+      if (t.country !== null && c === t.country) total += v
+      else if (t.industry !== null && i === t.industry) total += v
+    })
+    return total
+  }
 
   async function fetchTemplates() {
     setLoading(true)
@@ -585,6 +607,11 @@ export function Templates() {
                     <div className="flex items-center gap-2">
                       <FileText size={13} className="text-zinc-300 dark:text-zinc-600 shrink-0" />
                       <span className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[220px]">{t.name}</span>
+                      {leadCountMap.size > 0 && (
+                        <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+                          {getLeadCount(t)}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400 hidden sm:table-cell whitespace-nowrap">
