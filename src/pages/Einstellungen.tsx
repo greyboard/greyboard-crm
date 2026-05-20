@@ -1,4 +1,5 @@
-import { Sun, Moon, Mail, Clock } from 'lucide-react'
+import { useState } from 'react'
+import { Sun, Moon, Mail, Clock, Code2 } from 'lucide-react'
 import { useSettings, Settings } from '../hooks/useSettings'
 
 const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -27,6 +28,14 @@ const inputCls = 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-z
 
 export function Einstellungen() {
   const { settings, update } = useSettings()
+  const [signatureDraft, setSignatureDraft] = useState(settings.emailSignature)
+  const [signatureSaved, setSignatureSaved] = useState(false)
+
+  function saveSignature() {
+    update({ emailSignature: signatureDraft })
+    setSignatureSaved(true)
+    setTimeout(() => setSignatureSaved(false), 2000)
+  }
 
   function toggleDay(day: string) {
     const next = settings.sendDays.includes(day)
@@ -98,6 +107,41 @@ export function Einstellungen() {
                 onClick={() => update({ dailyMax: Math.min(100, settings.dailyMax + 1) })}
                 className="w-9 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 font-bold text-lg transition-colors flex items-center justify-center"
               >+</button>
+            </div>
+          </div>
+        </Section>
+
+        {/* E-Mail-Signatur */}
+        <Section
+          icon={Code2}
+          title="E-Mail-Signatur"
+          description="HTML-Signatur, die automatisch an jede ausgehende E-Mail angehängt wird. Reiner HTML-Code, z.&nbsp;B. mit Name, Position und Logo."
+        >
+          <div className="flex flex-col gap-3">
+            <textarea
+              value={signatureDraft}
+              onChange={e => setSignatureDraft(e.target.value)}
+              rows={8}
+              spellCheck={false}
+              placeholder={'<p>Mit freundlichen Grüßen<br>Max Mustermann</p>'}
+              className={`${inputCls} font-mono text-xs resize-y w-full`}
+            />
+            {signatureDraft && (
+              <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 bg-zinc-50 dark:bg-zinc-800/60">
+                <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-2 uppercase tracking-wider">Vorschau</p>
+                <div
+                  className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: signatureDraft }}
+                />
+              </div>
+            )}
+            <div className="flex justify-end">
+              <button
+                onClick={saveSignature}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
+              >
+                {signatureSaved ? '✓ Gespeichert' : 'Signatur speichern'}
+              </button>
             </div>
           </div>
         </Section>

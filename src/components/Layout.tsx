@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, Settings, FileText, Users } from 'lucide-react'
+import { LayoutDashboard, Settings, FileText, Users, ListOrdered } from 'lucide-react'
 
 const today = new Date().toLocaleDateString('de-DE', {
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -35,6 +35,10 @@ export function Layout() {
               <NavLink to="/kontakte" className={navCls}>
                 <Users size={14} />
                 Kontakte
+              </NavLink>
+              <NavLink to="/queue" className={navCls}>
+                <ListOrdered size={14} />
+                Queue
               </NavLink>
               <NavLink to="/templates" className={navCls}>
                 <FileText size={14} />

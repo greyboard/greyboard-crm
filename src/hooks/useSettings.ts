@@ -6,6 +6,7 @@ export interface Settings {
   sendDays: string[]
   sendTimeFrom: string
   sendTimeTo: string
+  emailSignature: string
 }
 
 const DEFAULTS: Settings = {
@@ -14,6 +15,7 @@ const DEFAULTS: Settings = {
   sendDays: ['Mo', 'Di', 'Mi', 'Do', 'Fr'],
   sendTimeFrom: '09:00',
   sendTimeTo: '17:00',
+  emailSignature: '',
 }
 
 function load(): Settings {

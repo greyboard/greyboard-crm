@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard'
 const Templates     = lazy(() => import('./pages/Templates').then(m => ({ default: m.Templates })))
 const Einstellungen = lazy(() => import('./pages/Einstellungen').then(m => ({ default: m.Einstellungen })))
 const Kontakte      = lazy(() => import('./pages/Kontakte').then(m => ({ default: m.Kontakte })))
+const Queue         = lazy(() => import('./pages/Queue').then(m => ({ default: m.Queue })))
 
 export default function App() {
   useSettings() // Theme auf documentElement anwenden
@@ -15,6 +16,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="kontakte" element={<Suspense fallback={null}><Kontakte /></Suspense>} />
+          <Route path="queue"    element={<Suspense fallback={null}><Queue /></Suspense>} />
           <Route path="templates" element={<Suspense fallback={null}><Templates /></Suspense>} />
           <Route path="einstellungen" element={<Suspense fallback={null}><Einstellungen /></Suspense>} />
         </Route>

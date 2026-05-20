@@ -70,6 +70,8 @@ export function Dashboard() {
           value={loading ? '...' : validatedCount}
           subtext="Bereit für Outreach"
           accent="emerald"
+          linkTo="/queue"
+          linkLabel="Queue anzeigen"
         />
         <KpiCard
           label="Heute gesendet"

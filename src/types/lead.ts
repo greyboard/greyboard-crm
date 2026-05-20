@@ -19,6 +19,7 @@ export interface Lead {
   icebreaker: string | null
   status: LeadStatus
   last_action_at: string
+  ghl_id?: string | null
   ghl_date_added?: string | null
   ghl_date_updated?: string | null
   gender?: 'm' | 'w' | 'd' | null
