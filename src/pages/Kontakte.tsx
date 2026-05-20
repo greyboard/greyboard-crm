@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Lead, LeadStatus } from '../types/lead'
 import { LeadDetailModal } from '../components/LeadDetailModal'
+import { StatusBadge, StatusSelect } from '../components/StatusSelect'
 
 // ── Typen ──────────────────────────────────────────────────────────────────────
 
@@ -15,19 +17,6 @@ const COUNTRY_NAMES: Record<string, string> = {
   CH: 'Schweiz', LI: 'Liechtenstein', DE: 'Deutschland', AT: 'Österreich',
 }
 
-// ── Konstanten ─────────────────────────────────────────────────────────────────
-
-const STATUS_OPTIONS: LeadStatus[] = ['Neu', 'Validiert', 'Kontaktiert', 'Kontaktversuch', 'Antwort erhalten', 'Nicht interessiert', 'Nicht geeignet']
-
-const statusCfg: Record<LeadStatus, string> = {
-  Neu:                  'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600/50',
-  Validiert:            'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30',
-  Kontaktiert:          'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600/50',
-  Kontaktversuch:       'bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30',
-  'Antwort erhalten':   'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30',
-  'Nicht interessiert': 'bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-500/30',
-  'Nicht geeignet':     'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30',
-}
 
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return '–'
@@ -86,6 +75,26 @@ export function Kontakte() {
   const [countries, setCountries]   = useState<string[]>([])
   const [sort, setSort]             = useState<{ key: SortKey; dir: SortDir }>({ key: 'last_action_at', dir: 'desc' })
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Modal via URL-Param öffnen
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (!id) return
+    supabase.from('leads').select('*').eq('id', id).single().then(({ data }) => {
+      if (data) setSelectedLead(data as Lead)
+    })
+  }, [])
+
+  function openModal(lead: Lead) {
+    setSelectedLead(lead)
+    setSearchParams(p => { p.set('id', lead.id); return p }, { replace: true })
+  }
+
+  function closeModal() {
+    setSelectedLead(null)
+    setSearchParams(p => { p.delete('id'); return p }, { replace: true })
+  }
 
   // Debounce Suche
   useEffect(() => {
@@ -176,10 +185,11 @@ export function Kontakte() {
             className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
           />
         </div>
-        <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value as any) }} className={selectCls}>
-          <option value="">Alle Status</option>
-          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <StatusSelect
+          value={filterStatus as LeadStatus}
+          onChange={s => setFilterStatus(s)}
+          nullable
+        />
         <select value={filterIndustry} onChange={e => setFilterIndustry(e.target.value)} className={selectCls}>
           <option value="">Alle Branchen</option>
           {industries.map(i => <option key={i} value={i}>{i}</option>)}
@@ -221,7 +231,7 @@ export function Kontakte() {
               {!loading && leads.map(lead => (
                 <tr
                   key={lead.id}
-                  onClick={() => setSelectedLead(lead)}
+                  onClick={() => openModal(lead)}
                   className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3">
@@ -249,9 +259,7 @@ export function Kontakte() {
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusCfg[lead.status]}`}>
-                      {lead.status}
-                    </span>
+                    <StatusBadge status={lead.status} />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {(() => {
@@ -300,7 +308,7 @@ export function Kontakte() {
 
       <LeadDetailModal
         lead={selectedLead}
-        onClose={() => setSelectedLead(null)}
+        onClose={closeModal}
         onUpdate={updated => {
           setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))
           setSelectedLead(updated)

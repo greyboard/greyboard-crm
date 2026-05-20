@@ -5,25 +5,12 @@ import {
 } from 'lucide-react'
 import { Lead, LeadStatus } from '../types/lead'
 import { supabase } from '../lib/supabase'
+import { StatusBadge, StatusSelect } from './StatusSelect'
 
 interface LeadDetailModalProps {
   lead: Lead | null
   onClose: () => void
   onUpdate?: (lead: Lead) => void
-}
-
-const STATUS_OPTIONS: LeadStatus[] = [
-  'Neu', 'Validiert', 'Kontaktiert', 'Kontaktversuch', 'Antwort erhalten', 'Nicht interessiert', 'Nicht geeignet',
-]
-
-const statusClasses: Record<LeadStatus, string> = {
-  Neu:                  'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600',
-  Validiert:            'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30',
-  Kontaktiert:          'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600/50',
-  Kontaktversuch:       'bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30',
-  'Antwort erhalten':   'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30',
-  'Nicht interessiert': 'bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-500/30',
-  'Nicht geeignet':     'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30',
 }
 
 const inputCls = 'w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors'
@@ -126,17 +113,16 @@ export function LeadDetailModal({ lead, onClose, onUpdate }: LeadDetailModalProp
             )}
 
             {isEditing ? (
-              <select
-                value={val('status') || lead.status}
-                onChange={set('status')}
-                className="mt-2 text-xs rounded-lg px-2.5 py-1 font-medium bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-emerald-500 transition-colors"
-              >
-                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="mt-2">
+                <StatusSelect
+                  value={(draft.status ?? lead.status) as LeadStatus}
+                  onChange={s => setDraft(p => ({ ...p, status: s }))}
+                />
+              </div>
             ) : (
-              <span className={`mt-1.5 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClasses[lead.status]}`}>
-                {lead.status}
-              </span>
+              <div className="mt-1.5">
+                <StatusBadge status={lead.status} />
+              </div>
             )}
           </div>
 

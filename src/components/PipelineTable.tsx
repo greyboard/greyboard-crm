@@ -1,5 +1,7 @@
 import { Eye, RefreshCw, ExternalLink } from 'lucide-react'
-import { Lead, LeadStatus } from '../types/lead'
+import { Link } from 'react-router-dom'
+import { Lead } from '../types/lead'
+import { StatusBadge } from './StatusSelect'
 
 interface PipelineTableProps {
   leads: Lead[]
@@ -14,36 +16,6 @@ interface PipelineTableProps {
   onFilterIndustry: (v: string) => void
 }
 
-const statusConfig: Record<LeadStatus, { label: string; className: string }> = {
-  Neu: {
-    label: 'Neu',
-    className: 'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600/50',
-  },
-  Validiert: {
-    label: 'Validiert',
-    className: 'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30',
-  },
-  Kontaktiert: {
-    label: 'Kontaktiert',
-    className: 'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600/50',
-  },
-  'Antwort erhalten': {
-    label: 'Antwort erhalten',
-    className: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30',
-  },
-  'Nicht interessiert': {
-    label: 'Nicht interessiert',
-    className: 'bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-500/30',
-  },
-  'Nicht geeignet': {
-    label: 'Nicht geeignet',
-    className: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30',
-  },
-  Kontaktversuch: {
-    label: 'Kontaktversuch',
-    className: 'bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30',
-  },
-}
 
 const selectCls = 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer'
 
@@ -104,11 +76,16 @@ export function PipelineTable({
               </tr>
             )}
             {leads.map(lead => {
-              const status = statusConfig[lead.status] ?? statusConfig['Neu']
               return (
                 <tr key={lead.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors group">
                   <td className="px-6 py-3.5">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">{lead.company_name}</p>
+                    <Link
+                      to={`/kontakte?id=${lead.id}`}
+                      onClick={e => e.stopPropagation()}
+                      className="font-medium text-zinc-900 dark:text-zinc-100 hover:text-emerald-600 dark:hover:text-emerald-400 truncate max-w-[180px] block transition-colors"
+                    >
+                      {lead.company_name}
+                    </Link>
                     {lead.industry && (
                       <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{lead.industry}</p>
                     )}
@@ -130,9 +107,7 @@ export function PipelineTable({
                     )}
                   </td>
                   <td className="px-6 py-3.5">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
-                      {status.label}
-                    </span>
+                    <StatusBadge status={lead.status} />
                   </td>
                   <td className="px-4 py-3.5 text-right">
                     <button

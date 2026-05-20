@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { AlertCircle, FileText, RefreshCw, ArrowRight, Calendar, Eye, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Lead, LeadStatus } from '../types/lead'
 import { useSettings, Settings } from '../hooks/useSettings'
@@ -324,7 +325,12 @@ export function Queue() {
                 return (
                   <tr key={lead.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors group">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">{lead.company_name}</p>
+                      <Link
+                        to={`/kontakte?id=${lead.id}`}
+                        className="font-medium text-zinc-900 dark:text-zinc-100 hover:text-emerald-600 dark:hover:text-emerald-400 truncate max-w-[180px] block transition-colors"
+                      >
+                        {lead.company_name}
+                      </Link>
                       {lead.full_name && (
                         <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-[180px]">{lead.full_name}</p>
                       )}
