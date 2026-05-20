@@ -332,7 +332,7 @@ export function Templates() {
   const [draft, setDraft] = useState(emptyTemplate())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
   const [countries, setCountries] = useState<string[]>([])
   const [industries, setIndustries] = useState<string[]>([])
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null)
@@ -373,10 +373,14 @@ export function Templates() {
     setDraft(emptyTemplate())
   }
 
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }
+
   async function save() {
     if (!draft.name.trim()) return
     setSaving(true)
-    setSaved(false)
     try {
       if (editingId === 'new') {
         const { data, error } = await supabase.from('email_templates').insert([draft]).select().single()
@@ -385,7 +389,6 @@ export function Templates() {
         setTemplates(prev =>
           [...prev, t].sort((a, b) => (a.industry ?? '').localeCompare(b.industry ?? '') || a.name.localeCompare(b.name))
         )
-        setEditingId(t.id)
       } else if (editingId) {
         const { data, error } = await supabase
           .from('email_templates')
@@ -396,8 +399,8 @@ export function Templates() {
         const t = data as EmailTemplate
         setTemplates(prev => prev.map(x => x.id === t.id ? t : x))
       }
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      cancelEdit()
+      showToast(`„${draft.name}" gespeichert.`)
     } finally {
       setSaving(false)
     }
@@ -436,8 +439,8 @@ export function Templates() {
             disabled={saving || !draft.name.trim()}
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg px-4 py-2.5 transition-colors"
           >
-            {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <Check size={15} /> : null}
-            {saving ? 'Speichern…' : saved ? 'Gespeichert' : 'Template speichern'}
+            {saving && <Loader2 size={15} className="animate-spin" />}
+            {saving ? 'Speichern…' : 'Template speichern'}
           </button>
         ) : (
           <button
@@ -553,8 +556,8 @@ export function Templates() {
               disabled={saving || !draft.name.trim()}
               className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg px-5 py-2.5 transition-colors"
             >
-              {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <Check size={15} /> : null}
-              {saving ? 'Speichern…' : saved ? 'Gespeichert' : 'Template speichern'}
+              {saving && <Loader2 size={15} className="animate-spin" />}
+              {saving ? 'Speichern…' : 'Template speichern'}
             </button>
           </div>
         </div>
@@ -638,6 +641,14 @@ export function Templates() {
           signature={settings.emailSignature}
           onClose={() => setPreviewTemplate(null)}
         />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 text-sm font-medium px-4 py-3 rounded-xl shadow-lg">
+          <Check size={15} className="text-emerald-400 dark:text-emerald-600 shrink-0" />
+          {toast}
+        </div>
       )}
     </div>
   )
