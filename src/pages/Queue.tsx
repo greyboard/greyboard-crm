@@ -243,6 +243,22 @@ export function Queue() {
     return map
   }, [withTemplate])
 
+  const duration = useMemo(() => {
+    let last: Date | null = null
+    for (const r of withTemplate) {
+      if (r.scheduledDate && (!last || r.scheduledDate > last)) last = r.scheduledDate
+    }
+    if (!last) return null
+    const days = Math.ceil((last.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    const months = days / 30.44
+    if (months >= 1) {
+      const m = Math.round(months)
+      return `${m} Monat${m !== 1 ? 'e' : ''}`
+    }
+    const weeks = Math.max(1, Math.round(days / 7))
+    return `${weeks} Woche${weeks !== 1 ? 'n' : ''}`
+  }, [withTemplate])
+
   return (
     <div className="flex flex-col gap-5">
 
@@ -251,7 +267,16 @@ export function Queue() {
         <div>
           <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Outreach-Queue</h1>
           <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">
-            {loading ? '…' : `${rows.length} Kontakte · ${withTemplate.length} bereit · ${byDate.size} Versandtage`}
+            {loading ? '…' : (
+              <>
+                {rows.length} Kontakte · {withTemplate.length} bereit · {byDate.size} Versandtage
+                {duration && (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    {' '}· Automatisches Marketing für {duration}
+                  </span>
+                )}
+              </>
+            )}
           </p>
         </div>
         <button
