@@ -262,7 +262,9 @@ export function Kontakte() {
                         {lead.company_name}
                       </p>
                       {hasTemplate(lead) && (
-                        <FileText size={12} className="shrink-0 text-emerald-500 dark:text-emerald-400" title="Template vorhanden" />
+                        <span title="Template vorhanden">
+                          <FileText size={12} className="shrink-0 text-emerald-500 dark:text-emerald-400" />
+                        </span>
                       )}
                     </div>
                     {lead.full_name && (
