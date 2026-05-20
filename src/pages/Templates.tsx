@@ -153,19 +153,22 @@ function substitute(text: string, lead: Lead): string {
 
 // ── Vorschau-Panel ─────────────────────────────────────────────────────────────
 function PreviewModal({
-  subject, pre_header, body, signature, onClose,
-}: { subject: string; pre_header: string | null; body: string; signature: string; onClose: () => void }) {
+  subject, pre_header, body, signature, country, industry, onClose,
+}: { subject: string; pre_header: string | null; body: string; signature: string; country: string | null; industry: string | null; onClose: () => void }) {
   const [leads, setLeads] = useState<Lead[]>([])
   const [query, setQuery] = useState('')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [loadingLeads, setLoadingLeads] = useState(true)
 
   useEffect(() => {
-    supabase.from('leads').select('*').order('company_name').limit(200).then(({ data }) => {
+    let q = supabase.from('leads').select('*').order('company_name').limit(200)
+    if (country)  q = q.eq('country', country)
+    if (industry) q = q.eq('industry', industry)
+    q.then(({ data }) => {
       setLeads((data as Lead[]) ?? [])
       setLoadingLeads(false)
     })
-  }, [])
+  }, [country, industry])
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase()
@@ -629,6 +632,8 @@ export function Templates() {
           pre_header={previewTemplate.pre_header}
           body={previewTemplate.body}
           signature={settings.emailSignature}
+          country={previewTemplate.country}
+          industry={previewTemplate.industry}
           onClose={() => setPreviewTemplate(null)}
         />
       )}
