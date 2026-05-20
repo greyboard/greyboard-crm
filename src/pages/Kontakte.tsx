@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { Search, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
+import { Search, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, FileText, Clock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Lead, LeadStatus } from '../types/lead'
 import { LeadDetailModal } from '../components/LeadDetailModal'
@@ -288,7 +288,14 @@ export function Kontakte() {
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <StatusBadge status={lead.status} />
+                    <div className="flex items-center gap-1.5">
+                      <StatusBadge status={lead.status} />
+                      {lead.status === 'Validiert' && (
+                        <span title="In Queue">
+                          <Clock size={12} className="shrink-0 text-blue-500 dark:text-blue-400" />
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {(() => {
