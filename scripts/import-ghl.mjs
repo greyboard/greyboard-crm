@@ -6,7 +6,9 @@ const GHL_LOCATION = 'z9fAY8LTH7r1fWcEqiXC'
 
 // GHL Custom Field IDs
 const CF_BRANCHE     = 'DAeE0ZyDWma2iobOVLQF'
-const CF_EISBRECHER  = null  // Wird befüllt sobald erste Kontakte in GHL gem_eisbrecher haben
+const CF_EISBRECHER  = 'fDtzqBPrkkfzHj2Q1Mws'
+const CF_GENDER      = 'OfBZPQrHmOSls5r7kquI'
+const CF_SALUTATION  = 'h0TyE8Q3DVB7quTFuit7'
 
 const SUPABASE_URL  = 'https://hgwnmpuequgrqxewpvaw.supabase.co'
 const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhnd25tcHVlcXVncnF4ZXdwdmF3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzMDYxNCwiZXhwIjoyMDk0ODA2NjE0fQ.09OGh0lOmNp09ymRdnQo4YqupUMspP_sh5pNMofHNUQ'
@@ -20,6 +22,21 @@ const BATCH_SIZE = 100
 function cf(contact, id) {
   if (!id) return null
   return contact.customFields?.find(f => f.id === id)?.value || null
+}
+
+function mapGender(v) {
+  if (!v) return null
+  const l = v.toLowerCase()
+  if (l.includes('männlich') || l === 'm') return 'm'
+  if (l.includes('weiblich') || l === 'w') return 'w'
+  if (l.includes('divers')   || l === 'd') return 'd'
+  return null
+}
+
+function mapSalutation(v) {
+  if (!v) return null
+  if (v === 'Du' || v === 'Sie') return v
+  return null
 }
 
 function mapContact(c) {
@@ -46,6 +63,8 @@ function mapContact(c) {
     custom_fields:     c.customFields  ?? [],
     industry:          cf(c, CF_BRANCHE),
     icebreaker:        cf(c, CF_EISBRECHER),
+    gender:            mapGender(cf(c, CF_GENDER)),
+    salutation:        mapSalutation(cf(c, CF_SALUTATION)),
     ghl_date_added:    c.dateAdded     || null,
     ghl_date_updated:  c.dateUpdated   || null,
     last_action_at:    c.dateUpdated   || c.dateAdded || new Date().toISOString(),
