@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, Settings, FileText, Users, ListOrdered } from 'lucide-react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, Settings, FileText, Users, ListOrdered, LogOut } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const today = new Date().toLocaleDateString('de-DE', {
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -13,6 +14,13 @@ const navCls = ({ isActive }: { isActive: boolean }) =>
   }`
 
 export function Layout() {
+  const navigate = useNavigate()
+
+  async function logout() {
+    await supabase.auth.signOut()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans transition-colors duration-200">
       <header className="border-b border-zinc-200 dark:border-zinc-800/60 bg-white/80 dark:bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-10">
@@ -51,7 +59,16 @@ export function Layout() {
             </nav>
           </div>
 
-          <p className="text-xs text-zinc-400 dark:text-zinc-600 hidden sm:block">{today}</p>
+          <div className="flex items-center gap-4">
+            <p className="text-xs text-zinc-400 dark:text-zinc-600 hidden sm:block">{today}</p>
+            <button
+              onClick={logout}
+              title="Abmelden"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
         </div>
       </header>
 
