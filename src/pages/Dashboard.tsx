@@ -17,7 +17,7 @@ export function Dashboard() {
   const [monthCount, setMonthCount]     = useState(0)
   const [loading, setLoading]           = useState(true)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [filterCountry, setFilterCountry]   = useState('Liechtenstein')
+  const [filterCountry, setFilterCountry]   = useState('LI')
   const [filterIndustry, setFilterIndustry] = useState('')
   const [countries, setCountries]       = useState<string[]>([])
   const [industries, setIndustries]     = useState<string[]>([])
@@ -33,8 +33,8 @@ export function Dashboard() {
       q,
       supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'Validiert'),
       supabase.from('leads').select('*', { count: 'exact', head: true })
-        .neq('status', 'Validiert')
-        .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+        .in('status', ['Kontaktiert', 'Kontaktversuch', 'Antwort erhalten'])
+        .gte('last_action_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
     ])
     setLeads((data as Lead[]) ?? [])
     setValidatedCount(validated ?? 0)

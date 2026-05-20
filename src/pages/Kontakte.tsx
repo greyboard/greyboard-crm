@@ -9,7 +9,11 @@ import { LeadDetailModal } from '../components/LeadDetailModal'
 type SortKey = 'company_name' | 'country' | 'industry' | 'status' | 'last_action_at'
 type SortDir = 'asc' | 'desc'
 
-const PAGE_SIZE = 100
+const PAGE_SIZE = 50
+
+const COUNTRY_NAMES: Record<string, string> = {
+  CH: 'Schweiz', LI: 'Liechtenstein', DE: 'Deutschland', AT: 'Österreich',
+}
 
 // ── Konstanten ─────────────────────────────────────────────────────────────────
 
@@ -182,7 +186,7 @@ export function Kontakte() {
         </select>
         <select value={filterCountry} onChange={e => setFilterCountry(e.target.value)} className={selectCls}>
           <option value="">Alle Länder</option>
-          {countries.map(c => <option key={c} value={c}>{c}</option>)}
+          {countries.map(c => <option key={c} value={c}>{COUNTRY_NAMES[c] ?? c}</option>)}
         </select>
       </div>
 

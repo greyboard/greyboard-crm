@@ -47,6 +47,10 @@ const statusConfig: Record<LeadStatus, { label: string; className: string }> = {
 
 const selectCls = 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer'
 
+const COUNTRY_NAMES: Record<string, string> = {
+  CH: 'Schweiz', LI: 'Liechtenstein', DE: 'Deutschland', AT: 'Österreich',
+}
+
 export function PipelineTable({
   leads, loading, onView, onRefresh,
   countries, industries, filterCountry, filterIndustry,
@@ -61,7 +65,7 @@ export function PipelineTable({
         <div className="flex items-center gap-2 flex-1 flex-wrap">
           <select value={filterCountry} onChange={e => onFilterCountry(e.target.value)} className={selectCls}>
             <option value="">Alle Länder</option>
-            {countries.map(c => <option key={c} value={c}>{c}</option>)}
+            {countries.map(c => <option key={c} value={c}>{COUNTRY_NAMES[c] ?? c}</option>)}
           </select>
           <select value={filterIndustry} onChange={e => onFilterIndustry(e.target.value)} className={selectCls}>
             <option value="">Alle Branchen</option>
