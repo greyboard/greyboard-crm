@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSettings } from '../hooks/useSettings'
 import { KpiCard } from '../components/KpiCard'
@@ -8,6 +8,7 @@ import { PipelineTable } from '../components/PipelineTable'
 import { LeadDetailModal } from '../components/LeadDetailModal'
 import { Lead, NewLead } from '../types/lead'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { buildSchedule } from '../lib/schedule'
 
 const TODAY_SENT = 0
 
@@ -62,9 +63,15 @@ export function Dashboard() {
     if (data.status === 'Validiert') setValidatedCount(prev => prev + 1)
   }
 
+  const queueEndDate = useMemo(() => {
+    if (!validatedCount) return null
+    const schedule = buildSchedule(validatedCount, settings)
+    return schedule[schedule.length - 1] ?? null
+  }, [validatedCount, settings])
+
   return (
     <div className="flex flex-col gap-6">
-      <StatusBanner count={validatedCount} />
+      <StatusBanner count={validatedCount} endDate={queueEndDate} />
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KpiCard

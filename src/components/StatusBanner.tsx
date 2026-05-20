@@ -2,9 +2,14 @@ const MAX_LEADS = 120
 
 interface StatusBannerProps {
   count: number
+  endDate?: Date | null
 }
 
-export function StatusBanner({ count }: StatusBannerProps) {
+function fmtEndDate(d: Date) {
+  return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+export function StatusBanner({ count, endDate }: StatusBannerProps) {
   if (count >= MAX_LEADS) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-emerald-500 bg-emerald-500/10 px-5 py-4">
@@ -15,6 +20,7 @@ export function StatusBanner({ count }: StatusBannerProps) {
           </p>
           <p className="text-sm text-emerald-600 dark:text-emerald-500 mt-0.5">
             Genug validierte Leads vorhanden. Zeit für die Outreach-Phase.
+            {endDate && <> Automatisches Marketing bis {fmtEndDate(endDate)}.</>}
           </p>
         </div>
       </div>
@@ -31,6 +37,7 @@ export function StatusBanner({ count }: StatusBannerProps) {
           </p>
           <p className="text-sm text-orange-600 dark:text-orange-500 mt-0.5">
             Weniger als 60 validierte Leads. Nachfüllen empfohlen.
+            {endDate && <> Automatisches Marketing bis {fmtEndDate(endDate)}.</>}
           </p>
         </div>
       </div>

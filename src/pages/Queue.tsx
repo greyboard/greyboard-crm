@@ -3,8 +3,9 @@ import { AlertCircle, FileText, RefreshCw, ArrowRight, Calendar, Eye, X } from '
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Lead, LeadStatus } from '../types/lead'
-import { useSettings, Settings } from '../hooks/useSettings'
+import { useSettings } from '../hooks/useSettings'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { buildSchedule, DAY_TO_JS } from '../lib/schedule'
 
 interface EmailTemplate {
   id: string
@@ -25,10 +26,6 @@ interface QueueRow {
 
 const COUNTRY_NAMES: Record<string, string> = {
   CH: 'Schweiz', LI: 'Liechtenstein', DE: 'Deutschland', AT: 'Österreich',
-}
-
-const DAY_TO_JS: Record<string, number> = {
-  Mo: 1, Di: 2, Mi: 3, Do: 4, Fr: 5, Sa: 6, So: 0,
 }
 
 const MATCH_LABELS: Record<QueueRow['matchType'], { label: string; cls: string }> = {
@@ -53,23 +50,6 @@ function matchTemplate(lead: Lead, templates: EmailTemplate[]): { template: Emai
 }
 
 // ── Versandplan ────────────────────────────────────────────────────────────────
-function buildSchedule(count: number, settings: Settings): Date[] {
-  const sendDayNums = new Set(settings.sendDays.map(d => DAY_TO_JS[d]))
-  const dates: Date[] = []
-  const cursor = new Date()
-  cursor.setHours(0, 0, 0, 0)
-  cursor.setDate(cursor.getDate() + 1)
-  while (dates.length < count) {
-    if (sendDayNums.has(cursor.getDay())) {
-      for (let i = 0; i < settings.dailyMax && dates.length < count; i++) {
-        dates.push(new Date(cursor))
-      }
-    }
-    cursor.setDate(cursor.getDate() + 1)
-  }
-  return dates
-}
-
 function fmtDate(d: Date, timeFrom: string, timeTo: string) {
   const day = d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })
   return `${day} · ${timeFrom}–${timeTo} Uhr`
