@@ -413,6 +413,12 @@ export function Templates() {
   const isEditing = editingId !== null
   const editingTemplate = templates.find(t => t.id === editingId) ?? null
 
+  const usedIndustries = useMemo(() => new Set(
+    templates
+      .filter(t => t.country === draft.country && t.industry !== null && t.id !== editingId)
+      .map(t => t.industry as string)
+  ), [templates, draft.country, editingId])
+
   return (
     <div className="flex flex-col gap-5">
 
@@ -468,7 +474,11 @@ export function Templates() {
                 className={selectCls}
               >
                 <option value="">Alle Branchen</option>
-                {industries.map(i => <option key={i} value={i}>{i}</option>)}
+                {industries.map(i => (
+                  <option key={i} value={i} disabled={usedIndustries.has(i)}>
+                    {i}{usedIndustries.has(i) ? ' ✓' : ''}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex flex-col gap-1">
