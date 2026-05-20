@@ -39,6 +39,10 @@ const statusConfig: Record<LeadStatus, { label: string; className: string }> = {
     label: 'Nicht geeignet',
     className: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30',
   },
+  Kontaktversuch: {
+    label: 'Kontaktversuch',
+    className: 'bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30',
+  },
 }
 
 const selectCls = 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer'

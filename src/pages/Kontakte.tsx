@@ -11,12 +11,13 @@ type SortDir = 'asc' | 'desc'
 
 // ── Konstanten ─────────────────────────────────────────────────────────────────
 
-const STATUS_OPTIONS: LeadStatus[] = ['Neu', 'Validiert', 'Kontaktiert', 'Antwort erhalten', 'Nicht interessiert', 'Nicht geeignet']
+const STATUS_OPTIONS: LeadStatus[] = ['Neu', 'Validiert', 'Kontaktiert', 'Kontaktversuch', 'Antwort erhalten', 'Nicht interessiert', 'Nicht geeignet']
 
 const statusCfg: Record<LeadStatus, string> = {
   Neu:                  'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600/50',
   Validiert:            'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30',
   Kontaktiert:          'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600/50',
+  Kontaktversuch:       'bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30',
   'Antwort erhalten':   'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30',
   'Nicht interessiert': 'bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-500/30',
   'Nicht geeignet':     'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30',
