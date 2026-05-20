@@ -25,6 +25,7 @@ export function Dashboard() {
   const fetchLeads = useCallback(async () => {
     setLoading(true)
     let q = supabase.from('leads').select('*').order('created_at', { ascending: false })
+      .eq('status', 'Neu')
     if (filterCountry)  q = q.eq('country', filterCountry)
     if (filterIndustry) q = q.eq('industry', filterIndustry)
     q = q.limit(10)
