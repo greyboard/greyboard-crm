@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useSettings } from './hooks/useSettings'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
+import { PageLoader } from './components/PageLoader'
 import { Login } from './pages/Login'
 import { lazy, Suspense } from 'react'
 import { Dashboard } from './pages/Dashboard'
@@ -18,10 +19,10 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Dashboard />} />
-          <Route path="kontakte"     element={<Suspense fallback={null}><Kontakte /></Suspense>} />
-          <Route path="queue"        element={<Suspense fallback={null}><Queue /></Suspense>} />
-          <Route path="templates"    element={<Suspense fallback={null}><Templates /></Suspense>} />
-          <Route path="einstellungen" element={<Suspense fallback={null}><Einstellungen /></Suspense>} />
+          <Route path="kontakte"      element={<Suspense fallback={<PageLoader />}><Kontakte /></Suspense>} />
+          <Route path="queue"         element={<Suspense fallback={<PageLoader />}><Queue /></Suspense>} />
+          <Route path="templates"     element={<Suspense fallback={<PageLoader />}><Templates /></Suspense>} />
+          <Route path="einstellungen" element={<Suspense fallback={<PageLoader />}><Einstellungen /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

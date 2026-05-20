@@ -80,22 +80,26 @@ export function Kontakte() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Modal via URL-Param öffnen
+  const openId = searchParams.get('id')
   useEffect(() => {
-    const id = searchParams.get('id')
-    if (!id) return
-    supabase.from('leads').select('*').eq('id', id).single().then(({ data }) => {
-      if (data) setSelectedLead(data as Lead)
+    if (!openId) return
+    supabase.from('leads').select('*').eq('id', openId).single().then(({ data, error }) => {
+      if (!error && data) setSelectedLead(data as Lead)
     })
-  }, [])
+  }, [openId])
 
   function openModal(lead: Lead) {
     setSelectedLead(lead)
-    setSearchParams(p => { p.set('id', lead.id); return p }, { replace: true })
+    const next = new URLSearchParams(searchParams)
+    next.set('id', lead.id)
+    setSearchParams(next, { replace: true })
   }
 
   function closeModal() {
     setSelectedLead(null)
-    setSearchParams(p => { p.delete('id'); return p }, { replace: true })
+    const next = new URLSearchParams(searchParams)
+    next.delete('id')
+    setSearchParams(next, { replace: true })
   }
 
   // Debounce Suche
