@@ -37,7 +37,7 @@ export function Login() {
           <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
             <span className="text-sm font-bold text-white">G</span>
           </div>
-          <span className="font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight text-lg">Greyboard CRM</span>
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight text-lg">Outreach</span>
         </div>
 
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">

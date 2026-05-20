@@ -30,7 +30,7 @@ export function Layout() {
               <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0">
                 <span className="text-xs font-bold text-white">G</span>
               </div>
-              <span className="font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">Greyboard CRM</span>
+              <span className="font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">Outreach</span>
             </div>
 
             <span className="text-zinc-200 dark:text-zinc-700">|</span>
