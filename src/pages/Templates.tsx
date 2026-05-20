@@ -351,7 +351,7 @@ export function Templates() {
 
   async function fetchTemplates() {
     setLoading(true)
-    const { data } = await supabase.from('email_templates').select('*').order('industry').order('name')
+    const { data } = await supabase.from('email_templates').select('*').order('country').order('industry').order('name')
     setTemplates((data as EmailTemplate[]) ?? [])
     setLoading(false)
   }
@@ -385,7 +385,7 @@ export function Templates() {
         if (error) throw error
         const t = data as EmailTemplate
         setTemplates(prev =>
-          [...prev, t].sort((a, b) => (a.industry ?? '').localeCompare(b.industry ?? '') || a.name.localeCompare(b.name))
+          [...prev, t].sort((a, b) => (a.country ?? '').localeCompare(b.country ?? '') || (a.industry ?? '').localeCompare(b.industry ?? '') || a.name.localeCompare(b.name))
         )
       } else if (editingId) {
         const { data, error } = await supabase
