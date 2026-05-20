@@ -430,13 +430,24 @@ export function Templates() {
             {loading ? '…' : `${templates.length} Templates`}
           </p>
         </div>
-        <button
-          onClick={startNew}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg px-4 py-2.5 transition-colors"
-        >
-          <Plus size={15} />
-          Neues Template
-        </button>
+        {isEditing ? (
+          <button
+            onClick={save}
+            disabled={saving || !draft.name.trim()}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg px-4 py-2.5 transition-colors"
+          >
+            {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <Check size={15} /> : null}
+            {saving ? 'Speichern…' : saved ? 'Gespeichert' : 'Template speichern'}
+          </button>
+        ) : (
+          <button
+            onClick={startNew}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg px-4 py-2.5 transition-colors"
+          >
+            <Plus size={15} />
+            Neues Template
+          </button>
+        )}
       </div>
 
       {/* Editor (erscheint über der Liste) */}
