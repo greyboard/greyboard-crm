@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { Search, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Lead, LeadStatus } from '../types/lead'
 import { LeadDetailModal } from '../components/LeadDetailModal'
@@ -77,6 +77,7 @@ export function Kontakte() {
   const [countries, setCountries]   = useState<string[]>([])
   const [sort, setSort]             = useState<{ key: SortKey; dir: SortDir }>({ key: 'last_action_at', dir: 'desc' })
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [templateCombos, setTemplateCombos] = useState<Set<string>>(new Set())
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Modal via URL-Param öffnen
@@ -111,12 +112,16 @@ export function Kontakte() {
   // Seite bei Filter-/Sort-Änderung zurücksetzen
   useEffect(() => { setPage(0) }, [debouncedQuery, filterStatus, filterIndustry, filterCountry, sort])
 
-  // Dropdown-Optionen einmalig laden
+  // Dropdown-Optionen + Templates einmalig laden
   useEffect(() => {
     supabase.from('leads').select('country, industry').then(({ data }) => {
       if (!data) return
       setIndustries([...new Set(data.map((r: any) => r.industry).filter(Boolean))].sort() as string[])
       setCountries([...new Set(data.map((r: any) => r.country).filter(Boolean))].sort() as string[])
+    })
+    supabase.from('email_templates').select('country, industry').then(({ data }) => {
+      if (!data) return
+      setTemplateCombos(new Set(data.map((t: any) => `${t.country ?? ''}|${t.industry ?? ''}`)))
     })
   }, [])
 
@@ -149,6 +154,17 @@ export function Kontakte() {
       prev.key === col
         ? { key: col, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
         : { key: col, dir: 'asc' }
+    )
+  }
+
+  function hasTemplate(lead: Lead): boolean {
+    const c = lead.country ?? ''
+    const i = lead.industry ?? ''
+    return (
+      templateCombos.has(`${c}|${i}`) ||
+      templateCombos.has(`${c}|`) ||
+      templateCombos.has(`|${i}`) ||
+      templateCombos.has('|')
     )
   }
 
@@ -241,9 +257,14 @@ export function Kontakte() {
                   className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[220px]">
-                      {lead.company_name}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[220px]">
+                        {lead.company_name}
+                      </p>
+                      {hasTemplate(lead) && (
+                        <FileText size={12} className="shrink-0 text-emerald-500 dark:text-emerald-400" title="Template vorhanden" />
+                      )}
+                    </div>
                     {lead.full_name && (
                       <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-[220px]">{lead.full_name}</p>
                     )}
