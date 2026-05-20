@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Sun, Moon, Mail, Clock, Code2 } from 'lucide-react'
 import { useSettings, Settings } from '../hooks/useSettings'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
@@ -27,6 +28,7 @@ function Section({ icon: Icon, title, description, children }: {
 const inputCls = 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-colors'
 
 export function Einstellungen() {
+  usePageTitle('Einstellungen')
   const { settings, update } = useSettings()
   const [signatureDraft, setSignatureDraft] = useState(settings.emailSignature)
   const [signatureSaved, setSignatureSaved] = useState(false)

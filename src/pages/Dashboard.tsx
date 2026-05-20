@@ -7,10 +7,12 @@ import { LeadForm } from '../components/LeadForm'
 import { PipelineTable } from '../components/PipelineTable'
 import { LeadDetailModal } from '../components/LeadDetailModal'
 import { Lead, NewLead } from '../types/lead'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const TODAY_SENT = 0
 
 export function Dashboard() {
+  usePageTitle()
   const { settings } = useSettings()
   const [leads, setLeads]               = useState<Lead[]>([])
   const [validatedCount, setValidatedCount] = useState(0)

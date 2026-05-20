@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Lead, LeadStatus } from '../types/lead'
 import { useSettings, Settings } from '../hooks/useSettings'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface EmailTemplate {
   id: string
@@ -198,6 +199,7 @@ function PreviewModal({
 
 // ── Hauptseite ─────────────────────────────────────────────────────────────────
 export function Queue() {
+  usePageTitle('Queue')
   const { settings } = useSettings()
   const [leads, setLeads] = useState<Lead[]>([])
   const [templates, setTemplates] = useState<EmailTemplate[]>([])

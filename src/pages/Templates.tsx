@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { RichTextEditor } from '../components/RichTextEditor'
 import { Lead } from '../types/lead'
 import { useSettings } from '../hooks/useSettings'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface EmailTemplate {
   id: string
@@ -324,6 +325,7 @@ function PreviewModal({
 
 // ── Haupt-Komponente ──────────────────────────────────────────────────────────
 export function Templates() {
+  usePageTitle('Templates')
   const { settings } = useSettings()
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [editingId, setEditingId] = useState<string | 'new' | null>(null)

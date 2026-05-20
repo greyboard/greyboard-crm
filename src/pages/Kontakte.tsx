@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { Search, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Lead, LeadStatus } from '../types/lead'
@@ -62,6 +63,7 @@ function ThSort({ label, col, sort, onSort }: {
 // ── Hauptseite ─────────────────────────────────────────────────────────────────
 
 export function Kontakte() {
+  usePageTitle('Kontakte')
   const [leads, setLeads]           = useState<Lead[]>([])
   const [total, setTotal]           = useState(0)
   const [loading, setLoading]       = useState(true)
