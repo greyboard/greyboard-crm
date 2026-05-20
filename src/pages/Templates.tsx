@@ -344,19 +344,31 @@ export function Templates() {
 
   useEffect(() => {
     fetchTemplates()
-    supabase.from('leads').select('country, industry').then(({ data }) => {
-      if (!data) return
+    ;(async () => {
+      const PAGE = 1000
+      let page = 0
+      const allRows: { country: string | null; industry: string | null }[] = []
+      while (true) {
+        const { data } = await supabase
+          .from('leads')
+          .select('country, industry')
+          .range(page * PAGE, (page + 1) * PAGE - 1)
+        if (!data || data.length === 0) break
+        allRows.push(...(data as any[]))
+        if (data.length < PAGE) break
+        page++
+      }
       const map = new Map<string, number>()
-      for (const row of data as any[]) {
+      for (const row of allRows) {
         const key = `${row.country ?? ''}|${row.industry ?? ''}`
         map.set(key, (map.get(key) ?? 0) + 1)
       }
       setLeadCountMap(map)
-      const uniqueCountries = [...new Set(data.map((r: any) => r.country).filter(Boolean))].sort()
-      const uniqueIndustries = [...new Set(data.map((r: any) => r.industry).filter(Boolean))].sort()
+      const uniqueCountries = [...new Set(allRows.map(r => r.country).filter(Boolean))].sort() as string[]
+      const uniqueIndustries = [...new Set(allRows.map(r => r.industry).filter(Boolean))].sort() as string[]
       setCountries(uniqueCountries)
       setIndustries(uniqueIndustries)
-    })
+    })()
   }, [])
 
   function getLeadCount(t: EmailTemplate): number {
