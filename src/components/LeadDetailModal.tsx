@@ -81,7 +81,8 @@ export function LeadDetailModal({ lead, onClose, onUpdate }: LeadDetailModalProp
     return (draft[key] as string | null | undefined) ?? ''
   }
 
-  const displayName = lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || null
+  const rawName = lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || null
+  const displayName = rawName ? rawName.replace(/\b\w/g, c => c.toUpperCase()) : null
   const rawDate   = lead.ghl_date_added || lead.created_at
   const addedDate = new Date(rawDate).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
   const addressLine = [lead.address].filter(Boolean).join('')

@@ -19,6 +19,11 @@ const COUNTRY_NAMES: Record<string, string> = {
 }
 
 
+function capWords(s: string | null | undefined) {
+  if (!s) return ''
+  return s.replace(/\b\w/g, c => c.toUpperCase())
+}
+
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return '–'
   const d = new Date(iso)
@@ -268,7 +273,7 @@ export function Kontakte() {
                       )}
                     </div>
                     {lead.full_name && (
-                      <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-[220px]">{lead.full_name}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-[220px]">{capWords(lead.full_name)}</p>
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
