@@ -223,7 +223,7 @@ export function Queue() {
       })
 
       // Gesendet → Kontaktversuch (Öffnen → Kontaktiert kommt per Webhook)
-      await supabase.from('leads').update({ status: 'Kontaktversuch' as LeadStatus }).eq('id', lead.id)
+      await supabase.from('leads').update({ status: 'Kontaktversuch' as LeadStatus, last_action_at: new Date().toISOString() }).eq('id', lead.id)
       setSending(s => ({ ...s, [lead.id]: 'ok' }))
       // Sofort aus dem lokalen State entfernen – kein Reload nötig
       setTimeout(() => setLeads(prev => prev.filter(l => l.id !== lead.id)), 800)

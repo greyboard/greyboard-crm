@@ -319,7 +319,7 @@ serve(async (req: Request) => {
         await Promise.all([
           supabase
             .from("leads")
-            .update({ status: "Kontaktversuch" })
+            .update({ status: "Kontaktversuch", last_action_at: new Date().toISOString() })
             .eq("id", lead.id),
           supabase.from("email_events").insert({
             event_type:      "sent",

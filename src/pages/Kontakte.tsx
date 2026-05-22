@@ -299,7 +299,9 @@ export function Kontakte() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {(() => {
-                      const d = lead.ghl_date_updated ?? lead.ghl_date_added ?? lead.last_action_at
+                      const d = [lead.last_action_at, lead.ghl_date_updated, lead.ghl_date_added]
+                        .filter(Boolean)
+                        .sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime())[0] ?? null
                       return (
                         <span className="text-sm text-zinc-500 dark:text-zinc-400" title={fmtDateTime(d)}>
                           {fmtDate(d)}

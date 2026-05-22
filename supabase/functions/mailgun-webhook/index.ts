@@ -116,7 +116,7 @@ serve(async (req: Request) => {
       if (isDowngrade || newPriority > currentPriority) {
         await supabase
           .from("leads")
-          .update({ status: newStatus })
+          .update({ status: newStatus, last_action_at: new Date().toISOString() })
           .eq("id", leadId);
 
         console.log(`[mailgun-webhook] Lead ${leadId}: ${currentStatus} → ${newStatus} (${eventType})`);
