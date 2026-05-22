@@ -388,7 +388,7 @@ export function Auswertung() {
                         {ev.url}
                       </a>
                     )}
-                    {ev.error_message && (
+                    {ev.error_message && ['failed', 'permanent_fail', 'temporary_fail'].includes(ev.event_type) && (
                       <p className="text-xs text-red-500 dark:text-red-400 truncate max-w-[260px]">{ev.error_message}</p>
                     )}
                   </td>

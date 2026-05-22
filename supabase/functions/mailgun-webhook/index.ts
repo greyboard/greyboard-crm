@@ -56,10 +56,15 @@ serve(async (req: Request) => {
     const userVars     = (eventData["user-variables"] as Record<string, string>) ?? {};
     const leadId       = userVars.leadId ?? null;
     const templateId   = userVars.templateId ?? null;
+    const subject      = (eventData.message?.headers?.subject as string) ?? null;
     const url          = eventData.url ?? null;
     const delivery     = eventData["delivery-status"] as Record<string, unknown> | undefined;
     const errorCode    = delivery?.code?.toString() ?? null;
-    const errorMessage = (delivery?.message as string) ?? (delivery?.description as string) ?? null;
+    // Nur bei echten Fehlern, nicht bei SMTP-Success-Antworten (delivered)
+    const isError      = ["failed", "permanent_fail", "temporary_fail"].includes(eventType);
+    const errorMessage = isError
+      ? ((delivery?.message as string) ?? (delivery?.description as string) ?? null)
+      : null;
 
     // Event in DB speichern
     const { error: insertError } = await supabase.from("email_events").insert({
@@ -68,6 +73,7 @@ serve(async (req: Request) => {
       recipient,
       lead_id:         leadId,
       template_id:     templateId,
+      subject,
       url,
       error_code:      errorCode,
       error_message:   errorMessage,
