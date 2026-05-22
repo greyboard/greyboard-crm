@@ -302,6 +302,7 @@ serve(async (req: Request) => {
         const mgData = await res.json() as { id?: string; message?: string };
 
         // Status + Event parallel schreiben
+        const cleanId = mgData.id ? mgData.id.replace(/^<|>$/g, "") : null;
         await Promise.all([
           supabase
             .from("leads")
@@ -309,7 +310,7 @@ serve(async (req: Request) => {
             .eq("id", lead.id),
           supabase.from("email_events").insert({
             event_type:      "sent",
-            mailgun_id:      mgData.id ?? null,
+            mailgun_id:      cleanId,
             recipient:       lead.email,
             lead_id:         lead.id,
             template_id:     template.id,

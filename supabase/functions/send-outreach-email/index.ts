@@ -106,9 +106,10 @@ serve(async (req: Request) => {
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       );
+      const cleanId = responseData.id ? responseData.id.replace(/^<|>$/g, "") : null;
       await supabase.from("email_events").insert({
         event_type:      "sent",
-        mailgun_id:      responseData.id ?? null,
+        mailgun_id:      cleanId,
         recipient:       to,
         lead_id:         metadata?.leadId ?? null,
         template_id:     metadata?.templateId ?? null,
