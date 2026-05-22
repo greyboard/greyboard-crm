@@ -116,7 +116,7 @@ function PreviewModal({
           <div>
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{lead.company_name}</h3>
             <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-              {lead.full_name && `${lead.full_name} · `}
+              {lead.full_name && `${cap(lead.full_name)} · `}
               Template: <span className="font-medium">{template.name}</span>
               {scheduledDate && (
                 <> · <span className="text-emerald-600 dark:text-emerald-400">{fmtDate(scheduledDate, timeFrom, timeTo)}</span></>
@@ -135,7 +135,7 @@ function PreviewModal({
         <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 shrink-0">
           <p className="text-xs text-zinc-400 mb-1.5">
             <span className="font-medium text-zinc-600 dark:text-zinc-300">An:</span>{' '}
-            {lead.full_name ? `${lead.full_name} <${lead.email ?? '–'}>` : lead.email ?? '–'}
+            {lead.full_name ? `${cap(lead.full_name)} <${lead.email ?? '–'}>` : lead.email ?? '–'}
           </p>
           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-0.5">Betreff:</p>
           <p
@@ -394,7 +394,7 @@ export function Queue() {
                         {lead.company_name}
                       </Link>
                       {lead.full_name && (
-                        <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-[180px]">{lead.full_name}</p>
+                        <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-[180px]">{cap(lead.full_name)}</p>
                       )}
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell whitespace-nowrap">
