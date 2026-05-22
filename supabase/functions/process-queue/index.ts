@@ -264,12 +264,13 @@ serve(async (req: Request) => {
         continue;
       }
 
-      const subject = substitute(template.subject, lead);
-      const rawBody = substitute(template.body, lead);
-      const html    = s.emailSignature
-        ? rawBody + "\n\n" + s.emailSignature
-        : rawBody;
-      const text    = html.replace(/<[^>]+>/g, "");
+      const subject  = substitute(template.subject, lead);
+      const rawBody  = substitute(template.body, lead);
+      const bodyHtml = s.emailSignature ? rawBody + "\n\n" + s.emailSignature : rawBody;
+      const html     = bodyHtml.trimStart().startsWith("<!DOCTYPE") || bodyHtml.trimStart().startsWith("<html")
+        ? bodyHtml
+        : `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${bodyHtml}</body></html>`;
+      const text     = bodyHtml.replace(/<[^>]+>/g, "");
 
       const form = new FormData();
       form.append("from", s.mailgunFromName ? `${s.mailgunFromName} <${s.mailgunFromEmail}>` : s.mailgunFromEmail);

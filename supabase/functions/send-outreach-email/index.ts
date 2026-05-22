@@ -56,11 +56,17 @@ serve(async (req: Request) => {
     const mailgunUrl = `${baseUrl}/v3/${mailgunDomain}/messages`;
     const credentials = btoa(`api:${mailgunApiKey}`);
 
+    // Vollständiges HTML-Dokument sicherstellen, damit Mailgun das Tracking-Pixel
+    // korrekt in den <body> einfügen kann.
+    const fullHtml = html.trimStart().startsWith("<!DOCTYPE") || html.trimStart().startsWith("<html")
+      ? html
+      : `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${html}</body></html>`;
+
     const formData = new FormData();
     formData.append("from", fromName ? `${fromName} <${fromEmail}>` : fromEmail);
     formData.append("to", to);
     formData.append("subject", subject);
-    formData.append("html", html);
+    formData.append("html", fullHtml);
     if (text) formData.append("text", text);
     if (replyTo) formData.append("h:Reply-To", replyTo);
     if (metadata) {
