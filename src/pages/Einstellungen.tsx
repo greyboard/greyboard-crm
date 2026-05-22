@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Sun, Moon, Mail, Clock, Code2 } from 'lucide-react'
+import { Sun, Moon, Mail, Clock, Code2, Key, Send, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { useSettings, Settings } from '../hooks/useSettings'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { sendOutreachEmail } from '../lib/mailgun'
 
 const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
@@ -32,6 +33,56 @@ export function Einstellungen() {
   const { settings, update } = useSettings()
   const [signatureDraft, setSignatureDraft] = useState(settings.emailSignature)
   const [signatureSaved, setSignatureSaved] = useState(false)
+
+  // Mailgun Drafts
+  const [mgApiKey, setMgApiKey]           = useState(settings.mailgunApiKey)
+  const [mgDomain, setMgDomain]           = useState(settings.mailgunDomain)
+  const [mgRegion, setMgRegion]           = useState<'us' | 'eu'>(settings.mailgunRegion)
+  const [mgFromEmail, setMgFromEmail]     = useState(settings.mailgunFromEmail)
+  const [mgFromName, setMgFromName]       = useState(settings.mailgunFromName)
+  const [mgReplyTo, setMgReplyTo]         = useState(settings.mailgunReplyTo)
+  const [mgSaved, setMgSaved]             = useState(false)
+  const [testEmail, setTestEmail]         = useState('')
+  const [testStatus, setTestStatus]       = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
+  const [testError, setTestError]         = useState('')
+
+  function saveMailgun() {
+    update({
+      mailgunApiKey:   mgApiKey.trim(),
+      mailgunDomain:   mgDomain.trim(),
+      mailgunRegion:   mgRegion,
+      mailgunFromEmail: mgFromEmail.trim(),
+      mailgunFromName:  mgFromName.trim(),
+      mailgunReplyTo:   mgReplyTo.trim(),
+    })
+    setMgSaved(true)
+    setTimeout(() => setMgSaved(false), 2000)
+  }
+
+  async function sendTestEmail() {
+    if (!testEmail.trim()) return
+    setTestStatus('sending')
+    setTestError('')
+    try {
+      await sendOutreachEmail({
+        to: testEmail.trim(),
+        fromEmail: mgFromEmail.trim() || `info@${mgDomain.trim()}`,
+        fromName: mgFromName.trim() || undefined,
+        replyTo: mgReplyTo.trim() || undefined,
+        subject: 'Mailgun Test – Greyboard CRM',
+        html: '<p>Diese Test-E-Mail bestätigt, dass Mailgun korrekt konfiguriert ist.</p>',
+        text: 'Diese Test-E-Mail bestätigt, dass Mailgun korrekt konfiguriert ist.',
+        mailgunApiKey: mgApiKey.trim(),
+        mailgunDomain: mgDomain.trim(),
+        mailgunRegion: mgRegion,
+      })
+      setTestStatus('ok')
+      setTimeout(() => setTestStatus('idle'), 4000)
+    } catch (e: unknown) {
+      setTestError(e instanceof Error ? e.message : 'Unbekannter Fehler')
+      setTestStatus('error')
+    }
+  }
 
   function saveSignature() {
     update({ emailSignature: signatureDraft })
@@ -143,6 +194,137 @@ export function Einstellungen() {
                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
               >
                 {signatureSaved ? '✓ Gespeichert' : 'Signatur speichern'}
+              </button>
+            </div>
+          </div>
+        </Section>
+
+        {/* Mailgun */}
+        <Section
+          icon={Key}
+          title="Mailgun"
+          description="API-Zugangsdaten für den E-Mail-Versand über Mailgun. Der API-Key bleibt serverseitig in der Edge Function und wird nie im Browser exponiert."
+        >
+          <div className="flex flex-col gap-4">
+            {/* API-Key */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-500">API-Key (Private Key)</label>
+              <input
+                type="password"
+                value={mgApiKey}
+                onChange={e => setMgApiKey(e.target.value)}
+                placeholder="key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                className={inputCls}
+                autoComplete="off"
+              />
+            </div>
+
+            {/* Domain + Region */}
+            <div className="flex gap-3">
+              <div className="flex flex-col gap-1.5 flex-1">
+                <label className="text-xs font-medium text-zinc-500">Domain</label>
+                <input
+                  type="text"
+                  value={mgDomain}
+                  onChange={e => setMgDomain(e.target.value)}
+                  placeholder="mg.example.com"
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-zinc-500">Region</label>
+                <div className="flex gap-1">
+                  {(['eu', 'us'] as const).map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setMgRegion(r)}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors
+                        ${mgRegion === r
+                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300'
+                        }`}
+                    >
+                      {r.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Absendername + Absenderadresse */}
+            <div className="flex gap-3">
+              <div className="flex flex-col gap-1.5 flex-1">
+                <label className="text-xs font-medium text-zinc-500">Absendername</label>
+                <input
+                  type="text"
+                  value={mgFromName}
+                  onChange={e => setMgFromName(e.target.value)}
+                  placeholder="Greyboard"
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 flex-1">
+                <label className="text-xs font-medium text-zinc-500">Absenderadresse</label>
+                <input
+                  type="email"
+                  value={mgFromEmail}
+                  onChange={e => setMgFromEmail(e.target.value)}
+                  placeholder="outreach@mg.example.com"
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            {/* Reply-To */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-500">Reply-To (optional)</label>
+              <input
+                type="email"
+                value={mgReplyTo}
+                onChange={e => setMgReplyTo(e.target.value)}
+                placeholder="kontakt@example.com"
+                className={inputCls}
+              />
+            </div>
+
+            {/* Test-E-Mail */}
+            <div className="border border-zinc-100 dark:border-zinc-800 rounded-xl p-4 flex flex-col gap-3 bg-zinc-50 dark:bg-zinc-800/40">
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Test-E-Mail</p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={e => setTestEmail(e.target.value)}
+                  placeholder="test@example.com"
+                  className={`${inputCls} flex-1`}
+                />
+                <button
+                  onClick={sendTestEmail}
+                  disabled={testStatus === 'sending' || !testEmail.trim() || !mgApiKey.trim() || !mgDomain.trim()}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 dark:bg-zinc-700 text-white text-sm font-semibold hover:bg-zinc-700 dark:hover:bg-zinc-600 transition-colors disabled:opacity-40"
+                >
+                  {testStatus === 'sending'
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : testStatus === 'ok'
+                    ? <CheckCircle2 size={14} />
+                    : testStatus === 'error'
+                    ? <XCircle size={14} />
+                    : <Send size={14} />}
+                  {testStatus === 'sending' ? 'Wird gesendet…' : testStatus === 'ok' ? 'Gesendet' : 'Testen'}
+                </button>
+              </div>
+              {testStatus === 'error' && (
+                <p className="text-xs text-red-600 dark:text-red-400">{testError}</p>
+              )}
+            </div>
+
+            {/* Speichern */}
+            <div className="flex justify-end">
+              <button
+                onClick={saveMailgun}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
+              >
+                {mgSaved ? '✓ Gespeichert' : 'Mailgun speichern'}
               </button>
             </div>
           </div>

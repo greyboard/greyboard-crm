@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { AlertCircle, FileText, RefreshCw, ArrowRight, Calendar, Eye, X } from 'lucide-react'
+import { AlertCircle, FileText, RefreshCw, ArrowRight, Calendar, Eye, X, Send, CheckCircle2, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Lead, LeadStatus } from '../types/lead'
 import { useSettings } from '../hooks/useSettings'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { buildSchedule, DAY_TO_JS } from '../lib/schedule'
+import { sendOutreachEmail } from '../lib/mailgun'
 
 interface EmailTemplate {
   id: string
@@ -185,6 +186,53 @@ export function Queue() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [preview, setPreview] = useState<{ lead: Lead; template: EmailTemplate; scheduledDate: Date | null } | null>(null)
+  const [sending, setSending] = useState<Record<string, 'idle' | 'sending' | 'ok' | 'error'>>({})
+  const [sendErrors, setSendErrors] = useState<Record<string, string>>({})
+
+  const mailgunConfigured = !!(settings.mailgunApiKey && settings.mailgunDomain && settings.mailgunFromEmail)
+
+  async function handleSend(lead: Lead, template: EmailTemplate) {
+    if (!lead.email) {
+      setSendErrors(e => ({ ...e, [lead.id]: 'Keine E-Mail-Adresse hinterlegt' }))
+      setSending(s => ({ ...s, [lead.id]: 'error' }))
+      return
+    }
+
+    setSending(s => ({ ...s, [lead.id]: 'sending' }))
+    setSendErrors(e => { const n = { ...e }; delete n[lead.id]; return n })
+
+    try {
+      const subject = substitute(template.subject, lead)
+      const bodyText = substitute(template.body, lead)
+      const html = settings.emailSignature
+        ? `${bodyText}<br><br><hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">${settings.emailSignature}`
+        : bodyText
+
+      await sendOutreachEmail({
+        to: lead.email,
+        fromEmail: settings.mailgunFromEmail,
+        fromName: settings.mailgunFromName || undefined,
+        replyTo: settings.mailgunReplyTo || undefined,
+        subject,
+        html,
+        text: bodyText.replace(/<[^>]+>/g, ''),
+        mailgunApiKey: settings.mailgunApiKey,
+        mailgunDomain: settings.mailgunDomain,
+        mailgunRegion: settings.mailgunRegion,
+        metadata: { leadId: lead.id, templateId: template.id },
+      })
+
+      setSending(s => ({ ...s, [lead.id]: 'ok' }))
+      // Status auf "Kontaktiert" setzen
+      await supabase.from('leads').update({ status: 'Kontaktiert' as LeadStatus }).eq('id', lead.id)
+      // Nach 3 s Lead aus der Queue entfernen (neu laden)
+      setTimeout(() => load(), 3000)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unbekannter Fehler'
+      setSendErrors(er => ({ ...er, [lead.id]: msg }))
+      setSending(s => ({ ...s, [lead.id]: 'error' }))
+    }
+  }
 
   async function load() {
     setLoading(true)
@@ -292,6 +340,17 @@ export function Queue() {
         </div>
       )}
 
+      {/* Hinweis: Mailgun nicht konfiguriert */}
+      {!loading && !mailgunConfigured && (
+        <div className="flex items-start gap-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-3">
+          <AlertCircle size={15} className="text-blue-500 shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            Mailgun ist noch nicht konfiguriert. Trage API-Key, Domain und Absenderadresse in den{' '}
+            <Link to="/einstellungen" className="font-semibold underline">Einstellungen</Link> ein, um E-Mails zu senden.
+          </p>
+        </div>
+      )}
+
       {/* Hinweis: ohne Template */}
       {!loading && withoutTemplate.length > 0 && (
         <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-4 py-3">
@@ -369,13 +428,44 @@ export function Queue() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {template && (
-                        <button
-                          onClick={() => setPreview({ lead, template, scheduledDate })}
-                          className="p-1.5 rounded-lg text-zinc-300 dark:text-zinc-600 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors opacity-0 group-hover:opacity-100"
-                          title="E-Mail-Vorschau"
-                        >
-                          <Eye size={15} />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Senden */}
+                          {mailgunConfigured && lead.email && (
+                            <div className="flex flex-col items-end gap-1">
+                              <button
+                                onClick={() => handleSend(lead, template)}
+                                disabled={sending[lead.id] === 'sending' || sending[lead.id] === 'ok'}
+                                title={sending[lead.id] === 'ok' ? 'Gesendet' : 'E-Mail jetzt senden'}
+                                className={`p-1.5 rounded-lg transition-colors
+                                  ${sending[lead.id] === 'ok'
+                                    ? 'text-emerald-500 dark:text-emerald-400'
+                                    : sending[lead.id] === 'error'
+                                    ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                    : 'text-zinc-300 dark:text-zinc-600 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 opacity-0 group-hover:opacity-100'
+                                  } disabled:cursor-not-allowed`}
+                              >
+                                {sending[lead.id] === 'sending'
+                                  ? <Loader2 size={15} className="animate-spin" />
+                                  : sending[lead.id] === 'ok'
+                                  ? <CheckCircle2 size={15} />
+                                  : <Send size={15} />}
+                              </button>
+                              {sending[lead.id] === 'error' && sendErrors[lead.id] && (
+                                <p className="text-[10px] text-red-500 max-w-[140px] text-right leading-tight">
+                                  {sendErrors[lead.id]}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          {/* Vorschau */}
+                          <button
+                            onClick={() => setPreview({ lead, template, scheduledDate })}
+                            className="p-1.5 rounded-lg text-zinc-300 dark:text-zinc-600 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors opacity-0 group-hover:opacity-100"
+                            title="E-Mail-Vorschau"
+                          >
+                            <Eye size={15} />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

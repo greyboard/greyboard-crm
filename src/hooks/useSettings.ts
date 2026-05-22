@@ -8,6 +8,13 @@ export interface Settings {
   sendTimeFrom: string
   sendTimeTo: string
   emailSignature: string
+  // Mailgun
+  mailgunApiKey: string
+  mailgunDomain: string
+  mailgunRegion: 'us' | 'eu'
+  mailgunFromEmail: string
+  mailgunFromName: string
+  mailgunReplyTo: string
 }
 
 const DEFAULTS: Settings = {
@@ -17,6 +24,12 @@ const DEFAULTS: Settings = {
   sendTimeFrom: '09:00',
   sendTimeTo: '17:00',
   emailSignature: '',
+  mailgunApiKey: '',
+  mailgunDomain: '',
+  mailgunRegion: 'eu',
+  mailgunFromEmail: '',
+  mailgunFromName: '',
+  mailgunReplyTo: '',
 }
 
 function fromLocal(): Settings {
