@@ -223,8 +223,8 @@ export function Queue() {
       })
 
       setSending(s => ({ ...s, [lead.id]: 'ok' }))
-      // Status auf "Kontaktiert" setzen
-      await supabase.from('leads').update({ status: 'Kontaktiert' as LeadStatus }).eq('id', lead.id)
+      // Gesendet → Kontaktversuch (Öffnen → Kontaktiert kommt per Webhook)
+      await supabase.from('leads').update({ status: 'Kontaktversuch' as LeadStatus }).eq('id', lead.id)
       // Nach 3 s Lead aus der Queue entfernen (neu laden)
       setTimeout(() => load(), 3000)
     } catch (e: unknown) {

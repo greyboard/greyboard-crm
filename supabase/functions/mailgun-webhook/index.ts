@@ -6,6 +6,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Mailgun-Event → Lead-Status
+// Nur upgraden, niemals downgraden (opened > delivered > sent)
+const STATUS_PRIORITY: Record<string, number> = {
+  Validiert:       0,
+  Kontaktversuch:  1,
+  Kontaktiert:     2,
+  "Antwort erhalten": 3,
+};
+
+const EVENT_TO_STATUS: Record<string, string | null> = {
+  delivered:      null,           // kein Status-Wechsel (nur Tracking)
+  opened:         "Kontaktiert",
+  clicked:        "Kontaktiert",
+  complained:     null,
+  unsubscribed:   null,
+  failed:         "Validiert",    // Bounce → zurück in Queue
+  permanent_fail: "Validiert",
+  temporary_fail: null,           // Soft-Bounce: erst abwarten
+};
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -17,8 +37,7 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Mailgun sendet application/json (webhook v3)
-    const payload = await req.json();
+    const payload   = await req.json();
     const eventData = payload["event-data"];
 
     if (!eventData) {
@@ -28,21 +47,22 @@ serve(async (req: Request) => {
       });
     }
 
-    const eventType     = eventData.event ?? "unknown";
-    const mailgunId     = eventData.message?.headers?.["message-id"] ?? eventData.id ?? null;
-    const recipient     = eventData.recipient ?? "";
-    const ts            = eventData.timestamp
+    const eventType    = eventData.event ?? "unknown";
+    const mailgunId    = eventData.message?.headers?.["message-id"] ?? eventData.id ?? null;
+    const recipient    = eventData.recipient ?? "";
+    const ts           = eventData.timestamp
       ? new Date(eventData.timestamp * 1000).toISOString()
       : new Date().toISOString();
-    const userVars      = (eventData["user-variables"] as Record<string, string>) ?? {};
-    const leadId        = userVars.leadId ?? null;
-    const templateId    = userVars.templateId ?? null;
-    const url           = eventData.url ?? null;
-    const delivery      = eventData["delivery-status"] as Record<string, unknown> | undefined;
-    const errorCode     = delivery?.code?.toString() ?? null;
-    const errorMessage  = (delivery?.message as string) ?? (delivery?.description as string) ?? null;
+    const userVars     = (eventData["user-variables"] as Record<string, string>) ?? {};
+    const leadId       = userVars.leadId ?? null;
+    const templateId   = userVars.templateId ?? null;
+    const url          = eventData.url ?? null;
+    const delivery     = eventData["delivery-status"] as Record<string, unknown> | undefined;
+    const errorCode    = delivery?.code?.toString() ?? null;
+    const errorMessage = (delivery?.message as string) ?? (delivery?.description as string) ?? null;
 
-    const { error } = await supabase.from("email_events").insert({
+    // Event in DB speichern
+    const { error: insertError } = await supabase.from("email_events").insert({
       event_type:      eventType,
       mailgun_id:      mailgunId,
       recipient,
@@ -56,12 +76,33 @@ serve(async (req: Request) => {
       event_timestamp: ts,
     });
 
-    if (error) {
-      console.error("[mailgun-webhook] DB error:", error.message);
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (insertError) {
+      console.error("[mailgun-webhook] DB insert error:", insertError.message);
+    }
+
+    // Lead-Status aktualisieren (nur wenn leadId vorhanden + Status-Mapping definiert)
+    const newStatus = EVENT_TO_STATUS[eventType];
+    if (leadId && newStatus !== undefined && newStatus !== null) {
+      const { data: lead } = await supabase
+        .from("leads")
+        .select("status")
+        .eq("id", leadId)
+        .single();
+
+      const currentStatus   = lead?.status ?? "";
+      const currentPriority = STATUS_PRIORITY[currentStatus] ?? 0;
+      const newPriority     = STATUS_PRIORITY[newStatus] ?? 0;
+
+      // Nur upgraden (außer Bounce → immer zurücksetzen)
+      const isDowngrade = eventType === "failed" || eventType === "permanent_fail";
+      if (isDowngrade || newPriority > currentPriority) {
+        await supabase
+          .from("leads")
+          .update({ status: newStatus })
+          .eq("id", leadId);
+
+        console.log(`[mailgun-webhook] Lead ${leadId}: ${currentStatus} → ${newStatus} (${eventType})`);
+      }
     }
 
     return new Response(JSON.stringify({ ok: true }), {
