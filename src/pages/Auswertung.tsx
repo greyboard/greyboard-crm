@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   Send, CheckCircle2, Eye, MousePointer2, XCircle,
-  AlertTriangle, RefreshCw, TrendingUp, ExternalLink,
+  AlertTriangle, RefreshCw, TrendingUp, ExternalLink, X, User,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -21,7 +21,25 @@ interface EmailEvent {
   created_at: string
 }
 
+interface Lead {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  company_name: string | null
+  email: string | null
+}
+
 type Range = '7d' | '30d' | 'all'
+type FilterKey = 'sent' | 'delivered' | 'opened' | 'clicked' | 'failed' | 'spam'
+
+const FILTER_TYPES: Record<FilterKey, string[]> = {
+  sent:      ['sent'],
+  delivered: ['delivered'],
+  opened:    ['opened'],
+  clicked:   ['clicked'],
+  failed:    ['failed', 'permanent_fail', 'temporary_fail'],
+  spam:      ['complained'],
+}
 
 const RANGE_LABELS: Record<Range, string> = { '7d': '7 Tage', '30d': '30 Tage', 'all': 'Alle' }
 
@@ -60,11 +78,20 @@ function EventBadge({ type }: { type: string }) {
   )
 }
 
-function KpiCard({ icon: Icon, label, value, sub, color }: {
+function KpiCard({ icon: Icon, label, value, sub, color, active, onClick }: {
   icon: React.ElementType; label: string; value: number | string; sub?: string; color: string
+  active?: boolean; onClick?: () => void
 }) {
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 flex flex-col gap-3">
+    <button
+      onClick={onClick}
+      className={`text-left bg-white dark:bg-zinc-900 border rounded-xl p-5 flex flex-col gap-3 transition-all
+        ${onClick ? 'cursor-pointer hover:shadow-sm' : 'cursor-default'}
+        ${active
+          ? 'border-emerald-400 dark:border-emerald-500 ring-1 ring-emerald-400/40 dark:ring-emerald-500/30'
+          : 'border-zinc-200 dark:border-zinc-800'
+        }`}
+    >
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>
         <Icon size={15} />
       </div>
@@ -73,7 +100,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
         <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{label}</p>
       </div>
       {sub && <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{sub}</p>}
-    </div>
+    </button>
   )
 }
 
@@ -82,6 +109,9 @@ export function Auswertung() {
   const [events, setEvents] = useState<EmailEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState<Range>('30d')
+  const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null)
+  const [filterLeads, setFilterLeads] = useState<Lead[]>([])
+  const [filterLeadsLoading, setFilterLeadsLoading] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -103,6 +133,29 @@ export function Auswertung() {
   }
 
   useEffect(() => { load() }, [range])
+
+  // Kontakte für aktiven Filter laden
+  useEffect(() => {
+    if (!activeFilter) { setFilterLeads([]); return }
+    const types = FILTER_TYPES[activeFilter]
+    const leadIds = [...new Set(
+      events.filter(e => types.includes(e.event_type) && e.lead_id).map(e => e.lead_id!)
+    )]
+    if (leadIds.length === 0) { setFilterLeads([]); return }
+    setFilterLeadsLoading(true)
+    supabase
+      .from('leads')
+      .select('id,first_name,last_name,company_name,email')
+      .in('id', leadIds)
+      .then(({ data }) => {
+        setFilterLeads((data ?? []) as Lead[])
+        setFilterLeadsLoading(false)
+      })
+  }, [activeFilter, events])
+
+  function toggleFilter(key: FilterKey) {
+    setActiveFilter(prev => prev === key ? null : key)
+  }
 
   const stats = useMemo(() => {
     const byType = (type: string | string[]) => {
@@ -129,7 +182,12 @@ export function Auswertung() {
     return { sentCount, deliveredCount, openedCount, clickedCount, failedCount, spamCount }
   }, [events])
 
-  const recentEvents = events.slice(0, 100)
+  const filteredEvents = useMemo(() => {
+    const base = events.slice(0, 100)
+    if (!activeFilter) return base
+    const types = FILTER_TYPES[activeFilter]
+    return events.filter(e => types.includes(e.event_type)).slice(0, 100)
+  }, [events, activeFilter])
 
   return (
     <div className="flex flex-col gap-6">
@@ -170,18 +228,70 @@ export function Auswertung() {
 
       {/* KPI-Karten */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard icon={Send}          label="Gesendet"    value={stats.sentCount}      color="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400" />
+        <KpiCard icon={Send}          label="Gesendet"    value={stats.sentCount}      color="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
+          active={activeFilter === 'sent'}      onClick={() => toggleFilter('sent')} />
         <KpiCard icon={CheckCircle2}  label="Zugestellt"  value={stats.deliveredCount} color="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-          sub={pct(stats.deliveredCount, stats.sentCount)} />
+          sub={pct(stats.deliveredCount, stats.sentCount)} active={activeFilter === 'delivered'} onClick={() => toggleFilter('delivered')} />
         <KpiCard icon={Eye}           label="Geöffnet"    value={stats.openedCount}    color="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-          sub={pct(stats.openedCount, stats.sentCount)} />
+          sub={pct(stats.openedCount, stats.sentCount)}    active={activeFilter === 'opened'}    onClick={() => toggleFilter('opened')} />
         <KpiCard icon={MousePointer2} label="Geklickt"    value={stats.clickedCount}   color="bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400"
-          sub={pct(stats.clickedCount, stats.sentCount)} />
+          sub={pct(stats.clickedCount, stats.sentCount)}   active={activeFilter === 'clicked'}   onClick={() => toggleFilter('clicked')} />
         <KpiCard icon={XCircle}       label="Bounce"      value={stats.failedCount}    color="bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-          sub={pct(stats.failedCount, stats.sentCount)} />
+          sub={pct(stats.failedCount, stats.sentCount)}    active={activeFilter === 'failed'}    onClick={() => toggleFilter('failed')} />
         <KpiCard icon={AlertTriangle} label="Spam"        value={stats.spamCount}      color="bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400"
-          sub={pct(stats.spamCount, stats.sentCount)} />
+          sub={pct(stats.spamCount, stats.sentCount)}      active={activeFilter === 'spam'}      onClick={() => toggleFilter('spam')} />
       </div>
+
+      {/* Kontakte-Panel für aktiven Filter */}
+      {activeFilter && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <User size={13} className="text-zinc-400 dark:text-zinc-500" />
+              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                Kontakte: {EVENT_META[FILTER_TYPES[activeFilter][0]]?.label ?? activeFilter}
+              </p>
+              <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                ({filterLeadsLoading ? '…' : filterLeads.length})
+              </span>
+            </div>
+            <button
+              onClick={() => setActiveFilter(null)}
+              className="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+            >
+              <X size={13} />
+            </button>
+          </div>
+          {filterLeadsLoading ? (
+            <p className="text-sm text-zinc-400 text-center py-8">Lade Kontakte…</p>
+          ) : filterLeads.length === 0 ? (
+            <p className="text-sm text-zinc-400 text-center py-8">Keine Kontakte mit lead_id für diesen Filter.</p>
+          ) : (
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              {filterLeads.map(lead => (
+                <div key={lead.id} className="px-4 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                  <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                      {(lead.first_name?.[0] ?? lead.company_name?.[0] ?? '?').toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                      {[lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.company_name || '–'}
+                    </p>
+                    {lead.company_name && (lead.first_name || lead.last_name) && (
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">{lead.company_name}</p>
+                    )}
+                  </div>
+                  <p className="text-xs font-mono text-zinc-400 dark:text-zinc-500 truncate max-w-[200px] hidden sm:block">
+                    {lead.email}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Raten-Übersicht */}
       {stats.sentCount > 0 && (
@@ -222,10 +332,12 @@ export function Auswertung() {
       {/* Events-Tabelle */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-            Letzte Events
-          </p>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">{events.length} gesamt</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              {activeFilter ? `Events: ${EVENT_META[FILTER_TYPES[activeFilter][0]]?.label ?? activeFilter}` : 'Letzte Events'}
+            </p>
+          </div>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">{filteredEvents.length} angezeigt</p>
         </div>
 
         {loading ? (
@@ -238,6 +350,8 @@ export function Auswertung() {
               Sende erst E-Mails und richte den Mailgun-Webhook ein.
             </p>
           </div>
+        ) : filteredEvents.length === 0 ? (
+          <p className="text-sm text-zinc-400 text-center py-8">Keine Events für diesen Filter.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -249,7 +363,7 @@ export function Auswertung() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-              {recentEvents.map(ev => (
+              {filteredEvents.map(ev => (
                 <tr key={ev.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                   <td className="px-4 py-3">
                     <EventBadge type={ev.event_type} />
