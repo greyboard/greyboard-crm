@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,12 +49,11 @@ serve(async (req: Request) => {
       );
     }
 
-    const baseUrl =
-      mailgunRegion === "eu"
-        ? "https://api.eu.mailgun.net"
-        : "https://api.mailgun.net";
+    const baseUrl = mailgunRegion === "eu"
+      ? "https://api.eu.mailgun.net"
+      : "https://api.mailgun.net";
 
-    const url = `${baseUrl}/v3/${mailgunDomain}/messages`;
+    const mailgunUrl = `${baseUrl}/v3/${mailgunDomain}/messages`;
     const credentials = btoa(`api:${mailgunApiKey}`);
 
     const formData = new FormData();
@@ -69,7 +69,7 @@ serve(async (req: Request) => {
       }
     }
 
-    const response = await fetch(url, {
+    const response = await fetch(mailgunUrl, {
       method: "POST",
       headers: { Authorization: `Basic ${credentials}` },
       body: formData,
@@ -85,19 +85,34 @@ serve(async (req: Request) => {
 
     if (!response.ok) {
       let errorMessage = `Mailgun Fehler ${response.status}`;
-      if (response.status === 401) {
-        errorMessage =
-          "Unautorisiert: Bitte prüfe den Mailgun API-Key und die Region (US/EU).";
-      } else if (response.status === 403) {
-        errorMessage =
-          "Zugriff verweigert: Bitte prüfe die IP-Whitelist in den Mailgun-Einstellungen.";
-      } else if (response.status === 400) {
-        errorMessage = `Ungültige Anfrage: ${responseData?.message || "Bitte prüfe die E-Mail-Parameter."}`;
-      }
+      if (response.status === 401) errorMessage = "Unautorisiert: Bitte prüfe den Mailgun API-Key und die Region (US/EU).";
+      else if (response.status === 403) errorMessage = "Zugriff verweigert: Bitte prüfe die IP-Whitelist in den Mailgun-Einstellungen.";
+      else if (response.status === 400) errorMessage = `Ungültige Anfrage: ${responseData?.message || "Bitte prüfe die E-Mail-Parameter."}`;
       return new Response(
         JSON.stringify({ error: errorMessage, details: responseData }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Sent-Event in Supabase speichern
+    try {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      );
+      await supabase.from("email_events").insert({
+        event_type:      "sent",
+        mailgun_id:      responseData.id ?? null,
+        recipient:       to,
+        lead_id:         metadata?.leadId ?? null,
+        template_id:     metadata?.templateId ?? null,
+        subject,
+        user_variables:  metadata ?? {},
+        event_timestamp: new Date().toISOString(),
+      });
+    } catch (dbErr) {
+      // DB-Fehler blockiert den Versand nicht
+      console.error("[send-outreach-email] DB log error:", dbErr);
     }
 
     return new Response(

@@ -1,0 +1,309 @@
+import { useState, useEffect, useMemo } from 'react'
+import {
+  Send, CheckCircle2, Eye, MousePointer2, XCircle,
+  AlertTriangle, RefreshCw, TrendingUp, ExternalLink,
+} from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { usePageTitle } from '../hooks/usePageTitle'
+
+interface EmailEvent {
+  id: string
+  event_type: string
+  mailgun_id: string | null
+  recipient: string
+  lead_id: string | null
+  template_id: string | null
+  subject: string | null
+  url: string | null
+  error_code: string | null
+  error_message: string | null
+  event_timestamp: string | null
+  created_at: string
+}
+
+type Range = '7d' | '30d' | 'all'
+
+const RANGE_LABELS: Record<Range, string> = { '7d': '7 Tage', '30d': '30 Tage', 'all': 'Alle' }
+
+const EVENT_META: Record<string, { label: string; icon: React.ElementType; cls: string; dotCls: string }> = {
+  sent:          { label: 'Gesendet',     icon: Send,          cls: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300',                     dotCls: 'bg-zinc-400' },
+  delivered:     { label: 'Zugestellt',   icon: CheckCircle2,  cls: 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300',                   dotCls: 'bg-blue-400' },
+  opened:        { label: 'Geöffnet',     icon: Eye,           cls: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',        dotCls: 'bg-emerald-400' },
+  clicked:       { label: 'Geklickt',     icon: MousePointer2, cls: 'bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300',            dotCls: 'bg-violet-400' },
+  failed:        { label: 'Fehlgeschl.',  icon: XCircle,       cls: 'bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300',                       dotCls: 'bg-red-400' },
+  permanent_fail:{ label: 'Bounce',       icon: XCircle,       cls: 'bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300',                       dotCls: 'bg-red-400' },
+  temporary_fail:{ label: 'Soft Bounce',  icon: AlertTriangle,  cls: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300',               dotCls: 'bg-amber-400' },
+  complained:    { label: 'Spam',         icon: AlertTriangle,  cls: 'bg-orange-50 dark:bg-orange-500/15 text-orange-700 dark:text-orange-300',           dotCls: 'bg-orange-400' },
+  unsubscribed:  { label: 'Abgemeldet',   icon: XCircle,       cls: 'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-500 dark:text-zinc-400',                  dotCls: 'bg-zinc-400' },
+}
+
+function pct(a: number, b: number) {
+  if (!b) return '–'
+  return `${((a / b) * 100).toFixed(1)} %`
+}
+
+function fmtDate(iso: string | null) {
+  if (!iso) return '–'
+  return new Date(iso).toLocaleString('de-DE', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+function EventBadge({ type }: { type: string }) {
+  const meta = EVENT_META[type] ?? { label: type, icon: Send, cls: 'bg-zinc-100 text-zinc-500', dotCls: 'bg-zinc-400' }
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${meta.dotCls}`} />
+      {meta.label}
+    </span>
+  )
+}
+
+function KpiCard({ icon: Icon, label, value, sub, color }: {
+  icon: React.ElementType; label: string; value: number | string; sub?: string; color: string
+}) {
+  return (
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 flex flex-col gap-3">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>
+        <Icon size={15} />
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{value}</p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{label}</p>
+      </div>
+      {sub && <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{sub}</p>}
+    </div>
+  )
+}
+
+export function Auswertung() {
+  usePageTitle('Auswertung')
+  const [events, setEvents] = useState<EmailEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [range, setRange] = useState<Range>('30d')
+
+  async function load() {
+    setLoading(true)
+    let query = supabase
+      .from('email_events')
+      .select('*')
+      .order('event_timestamp', { ascending: false })
+      .limit(500)
+
+    if (range !== 'all') {
+      const days = range === '7d' ? 7 : 30
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+      query = query.gte('event_timestamp', since)
+    }
+
+    const { data } = await query
+    setEvents((data ?? []) as EmailEvent[])
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [range])
+
+  const stats = useMemo(() => {
+    const byType = (type: string | string[]) => {
+      const types = Array.isArray(type) ? type : [type]
+      return events.filter(e => types.includes(e.event_type))
+    }
+    const uniqueBy = (evts: EmailEvent[]) =>
+      new Set(evts.map(e => e.mailgun_id).filter(Boolean)).size
+
+    const sent      = byType('sent')
+    const delivered = byType('delivered')
+    const opened    = byType('opened')
+    const clicked   = byType('clicked')
+    const failed    = byType(['failed', 'permanent_fail', 'temporary_fail'])
+    const spam      = byType('complained')
+
+    const sentCount      = sent.length
+    const deliveredCount = uniqueBy(delivered)
+    const openedCount    = uniqueBy(opened)
+    const clickedCount   = uniqueBy(clicked)
+    const failedCount    = uniqueBy(failed)
+    const spamCount      = spam.length
+
+    return { sentCount, deliveredCount, openedCount, clickedCount, failedCount, spamCount }
+  }, [events])
+
+  const recentEvents = events.slice(0, 100)
+
+  return (
+    <div className="flex flex-col gap-6">
+
+      {/* Kopfzeile */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Auswertung</h1>
+          <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">
+            Öffnungsraten, Bounces und Klicks aus dem Outreach.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-800/60 rounded-lg border border-zinc-200 dark:border-zinc-700">
+            {(Object.keys(RANGE_LABELS) as Range[]).map(r => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all
+                  ${range === r
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200 dark:border-zinc-700'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                  }`}
+              >
+                {RANGE_LABELS[r]}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors disabled:opacity-40"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      {/* KPI-Karten */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard icon={Send}          label="Gesendet"    value={stats.sentCount}      color="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400" />
+        <KpiCard icon={CheckCircle2}  label="Zugestellt"  value={stats.deliveredCount} color="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+          sub={pct(stats.deliveredCount, stats.sentCount)} />
+        <KpiCard icon={Eye}           label="Geöffnet"    value={stats.openedCount}    color="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+          sub={pct(stats.openedCount, stats.sentCount)} />
+        <KpiCard icon={MousePointer2} label="Geklickt"    value={stats.clickedCount}   color="bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400"
+          sub={pct(stats.clickedCount, stats.sentCount)} />
+        <KpiCard icon={XCircle}       label="Bounce"      value={stats.failedCount}    color="bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+          sub={pct(stats.failedCount, stats.sentCount)} />
+        <KpiCard icon={AlertTriangle} label="Spam"        value={stats.spamCount}      color="bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400"
+          sub={pct(stats.spamCount, stats.sentCount)} />
+      </div>
+
+      {/* Raten-Übersicht */}
+      {stats.sentCount > 0 && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp size={14} className="text-zinc-400 dark:text-zinc-500" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Conversion-Funnel</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: 'Zustellrate',  value: stats.deliveredCount, color: 'bg-blue-400' },
+              { label: 'Öffnungsrate', value: stats.openedCount,    color: 'bg-emerald-400' },
+              { label: 'Klickrate',    value: stats.clickedCount,   color: 'bg-violet-400' },
+            ].map(({ label, value, color }) => {
+              const ratio = stats.sentCount ? value / stats.sentCount : 0
+              return (
+                <div key={label} className="flex items-center gap-3">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 w-28 shrink-0">{label}</p>
+                  <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${color}`}
+                      style={{ width: `${Math.min(ratio * 100, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 w-14 text-right tabular-nums">
+                    {(ratio * 100).toFixed(1)} %
+                  </p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 w-16 text-right tabular-nums">
+                    {value} / {stats.sentCount}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Events-Tabelle */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+            Letzte Events
+          </p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">{events.length} gesamt</p>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-zinc-400 text-center py-12">Lade Events…</p>
+        ) : events.length === 0 ? (
+          <div className="text-center py-16 px-4">
+            <Send size={24} className="text-zinc-200 dark:text-zinc-700 mx-auto mb-3" />
+            <p className="text-sm text-zinc-400 dark:text-zinc-500">Noch keine Events vorhanden.</p>
+            <p className="text-xs text-zinc-300 dark:text-zinc-600 mt-1">
+              Sende erst E-Mails und richte den Mailgun-Webhook ein.
+            </p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Event</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider hidden sm:table-cell">Empfänger</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider hidden md:table-cell">Betreff / Details</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Zeitpunkt</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              {recentEvents.map(ev => (
+                <tr key={ev.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                  <td className="px-4 py-3">
+                    <EventBadge type={ev.event_type} />
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <p className="text-xs text-zinc-700 dark:text-zinc-300 font-mono truncate max-w-[200px]">
+                      {ev.recipient}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    {ev.subject && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[260px]">{ev.subject}</p>
+                    )}
+                    {ev.url && (
+                      <a
+                        href={ev.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 hover:underline truncate max-w-[260px]"
+                      >
+                        <ExternalLink size={10} />
+                        {ev.url}
+                      </a>
+                    )}
+                    {ev.error_message && (
+                      <p className="text-xs text-red-500 dark:text-red-400 truncate max-w-[260px]">{ev.error_message}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell whitespace-nowrap">
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">{fmtDate(ev.event_timestamp)}</p>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Webhook-Hinweis */}
+      <div className="border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4 flex flex-col gap-2">
+        <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Mailgun-Webhook konfigurieren</p>
+        <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+          Damit Öffnungen, Klicks und Bounces hier erscheinen, muss in{' '}
+          <a href="https://app.mailgun.com/app/sending/domains" target="_blank" rel="noopener noreferrer"
+            className="underline font-medium">Mailgun unter Webhooks</a>{' '}
+          folgende URL für alle Event-Typen eingetragen werden:
+        </p>
+        <code className="text-xs font-mono text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/20 rounded px-2 py-1 break-all">
+          https://hgwnmpuequgrqxewpvaw.supabase.co/functions/v1/mailgun-webhook
+        </code>
+        <p className="text-xs text-blue-500 dark:text-blue-500">
+          Events: delivered · opened · clicked · permanent_fail · temporary_fail · complained · unsubscribed
+        </p>
+      </div>
+    </div>
+  )
+}

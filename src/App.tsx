@@ -10,6 +10,7 @@ const Templates     = lazy(() => import('./pages/Templates').then(m => ({ defaul
 const Einstellungen = lazy(() => import('./pages/Einstellungen').then(m => ({ default: m.Einstellungen })))
 const Kontakte      = lazy(() => import('./pages/Kontakte').then(m => ({ default: m.Kontakte })))
 const Queue         = lazy(() => import('./pages/Queue').then(m => ({ default: m.Queue })))
+const Auswertung    = lazy(() => import('./pages/Auswertung').then(m => ({ default: m.Auswertung })))
 
 export default function App() {
   useSettings()
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="kontakte"      element={<Suspense fallback={<PageLoader />}><Kontakte /></Suspense>} />
           <Route path="queue"         element={<Suspense fallback={<PageLoader />}><Queue /></Suspense>} />
           <Route path="templates"     element={<Suspense fallback={<PageLoader />}><Templates /></Suspense>} />
+          <Route path="auswertung"    element={<Suspense fallback={<PageLoader />}><Auswertung /></Suspense>} />
           <Route path="einstellungen" element={<Suspense fallback={<PageLoader />}><Einstellungen /></Suspense>} />
         </Route>
       </Routes>

@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Settings, FileText, Users, ListOrdered, LogOut } from 'lucide-react'
+import { LayoutDashboard, Settings, FileText, Users, ListOrdered, LogOut, BarChart2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const today = new Date().toLocaleDateString('de-DE', {
@@ -51,6 +51,10 @@ export function Layout() {
               <NavLink to="/templates" className={navCls}>
                 <FileText size={14} />
                 Templates
+              </NavLink>
+              <NavLink to="/auswertung" className={navCls}>
+                <BarChart2 size={14} />
+                Auswertung
               </NavLink>
               <NavLink to="/einstellungen" className={navCls}>
                 <Settings size={14} />
