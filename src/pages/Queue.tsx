@@ -222,11 +222,11 @@ export function Queue() {
         metadata: { leadId: lead.id, templateId: template.id },
       })
 
-      setSending(s => ({ ...s, [lead.id]: 'ok' }))
       // Gesendet → Kontaktversuch (Öffnen → Kontaktiert kommt per Webhook)
       await supabase.from('leads').update({ status: 'Kontaktversuch' as LeadStatus }).eq('id', lead.id)
-      // Nach 3 s Lead aus der Queue entfernen (neu laden)
-      setTimeout(() => load(), 3000)
+      setSending(s => ({ ...s, [lead.id]: 'ok' }))
+      // Sofort aus dem lokalen State entfernen – kein Reload nötig
+      setTimeout(() => setLeads(prev => prev.filter(l => l.id !== lead.id)), 800)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unbekannter Fehler'
       setSendErrors(er => ({ ...er, [lead.id]: msg }))
