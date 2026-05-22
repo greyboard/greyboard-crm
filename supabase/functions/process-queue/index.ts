@@ -154,9 +154,35 @@ function zurichNow() {
   return { dateStr, hhmm, weekday };
 }
 
+function timeToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+// Wie viele E-Mails sollen in diesem Stunden-Slot gesendet werden?
+// Verteilt gleichmäßig über die verbleibenden Stunden-Slots im Zeitfenster.
+function batchSize(remaining: number, currentHhmm: string, sendTimeTo: string): number {
+  const currentHour     = parseInt(currentHhmm.split(":")[0]);
+  const windowEndMin    = timeToMinutes(sendTimeTo);
+  const hoursRemaining  = Math.max(1, Math.floor((windowEndMin - currentHour * 60) / 60));
+  return Math.ceil(remaining / hoursRemaining);
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // ── Cron-Secret prüfen ────────────────────────────────────────────────────
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (cronSecret) {
+    const authHeader = req.headers.get("authorization") ?? "";
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   }
 
   const supabase = createClient(
@@ -220,6 +246,9 @@ serve(async (req: Request) => {
       });
     }
 
+    // Batch-Größe: gleichmäßig über verbleibende Stunden-Slots verteilen
+    const thisBatch = batchSize(remaining, hhmm, s.sendTimeTo);
+
     // ── 4. Leads + Templates laden ──────────────────────────────────────────
     const [leadsRes, templatesRes] = await Promise.all([
       supabase
@@ -230,7 +259,7 @@ serve(async (req: Request) => {
         .eq("status", "Validiert")
         .not("email", "is", null)
         .order("created_at", { ascending: true })
-        .limit(remaining),
+        .limit(thisBatch),
       supabase
         .from("email_templates")
         .select("id,name,subject,body,pre_header,country,industry"),
@@ -328,7 +357,7 @@ serve(async (req: Request) => {
       }
     }
 
-    return json({ ok: true, sent, skipped, dailyLimit: s.dailyMax, alreadySent });
+    return json({ ok: true, sent, skipped, batch: thisBatch, dailyLimit: s.dailyMax, alreadySent });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Internal error";
     console.error("[process-queue]", msg);
