@@ -186,7 +186,7 @@ export function Queue() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [preview, setPreview] = useState<{ lead: Lead; template: EmailTemplate; scheduledDate: Date | null } | null>(null)
-  const [sending, setSending] = useState<Record<string, 'idle' | 'sending' | 'ok' | 'error'>>({})
+  const [sending, setSending] = useState<Record<string, 'idle' | 'confirm' | 'sending' | 'ok' | 'error'>>({})
   const [sendErrors, setSendErrors] = useState<Record<string, string>>({})
 
   const mailgunConfigured = !!(settings.mailgunApiKey && settings.mailgunDomain && settings.mailgunFromEmail)
@@ -432,24 +432,44 @@ export function Queue() {
                           {/* Senden */}
                           {mailgunConfigured && lead.email && (
                             <div className="flex flex-col items-end gap-1">
-                              <button
-                                onClick={() => handleSend(lead, template)}
-                                disabled={sending[lead.id] === 'sending' || sending[lead.id] === 'ok'}
-                                title={sending[lead.id] === 'ok' ? 'Gesendet' : 'E-Mail jetzt senden'}
-                                className={`p-1.5 rounded-lg transition-colors
-                                  ${sending[lead.id] === 'ok'
-                                    ? 'text-emerald-500 dark:text-emerald-400'
-                                    : sending[lead.id] === 'error'
-                                    ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                                    : 'text-zinc-300 dark:text-zinc-600 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 opacity-0 group-hover:opacity-100'
-                                  } disabled:cursor-not-allowed`}
-                              >
-                                {sending[lead.id] === 'sending'
-                                  ? <Loader2 size={15} className="animate-spin" />
-                                  : sending[lead.id] === 'ok'
-                                  ? <CheckCircle2 size={15} />
-                                  : <Send size={15} />}
-                              </button>
+                              {sending[lead.id] === 'confirm' ? (
+                                <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1">
+                                  <span className="text-xs text-zinc-500 dark:text-zinc-400 mr-1">Senden?</span>
+                                  <button
+                                    onClick={() => handleSend(lead, template)}
+                                    title="Ja, senden"
+                                    className="p-1 rounded text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+                                  >
+                                    <CheckCircle2 size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => setSending(s => ({ ...s, [lead.id]: 'idle' }))}
+                                    title="Abbrechen"
+                                    className="p-1 rounded text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setSending(s => ({ ...s, [lead.id]: 'confirm' }))}
+                                  disabled={sending[lead.id] === 'sending' || sending[lead.id] === 'ok'}
+                                  title={sending[lead.id] === 'ok' ? 'Gesendet' : 'E-Mail jetzt senden'}
+                                  className={`p-1.5 rounded-lg transition-colors
+                                    ${sending[lead.id] === 'ok'
+                                      ? 'text-emerald-500 dark:text-emerald-400'
+                                      : sending[lead.id] === 'error'
+                                      ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                      : 'text-zinc-300 dark:text-zinc-600 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 opacity-0 group-hover:opacity-100'
+                                    } disabled:cursor-not-allowed`}
+                                >
+                                  {sending[lead.id] === 'sending'
+                                    ? <Loader2 size={15} className="animate-spin" />
+                                    : sending[lead.id] === 'ok'
+                                    ? <CheckCircle2 size={15} />
+                                    : <Send size={15} />}
+                                </button>
+                              )}
                               {sending[lead.id] === 'error' && sendErrors[lead.id] && (
                                 <p className="text-[10px] text-red-500 max-w-[140px] text-right leading-tight">
                                   {sendErrors[lead.id]}
