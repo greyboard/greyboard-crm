@@ -29,6 +29,11 @@ interface Lead {
   email: string | null
 }
 
+interface Template {
+  id: string
+  name: string
+}
+
 type Range = '7d' | '30d' | 'all'
 type FilterKey = 'sent' | 'delivered' | 'opened' | 'clicked' | 'failed' | 'spam'
 
@@ -112,6 +117,7 @@ export function Auswertung() {
   const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null)
   const [filterLeads, setFilterLeads] = useState<Lead[]>([])
   const [filterLeadsLoading, setFilterLeadsLoading] = useState(false)
+  const [templates, setTemplates] = useState<Record<string, string>>({})
 
   async function load() {
     setLoading(true)
@@ -133,6 +139,14 @@ export function Auswertung() {
   }
 
   useEffect(() => { load() }, [range])
+
+  useEffect(() => {
+    supabase.from('email_templates').select('id,name').then(({ data }) => {
+      const map: Record<string, string> = {}
+      ;(data ?? []).forEach((t: Template) => { map[t.id] = t.name })
+      setTemplates(map)
+    })
+  }, [])
 
   // Kontakte für aktiven Filter laden
   useEffect(() => {
@@ -358,7 +372,7 @@ export function Auswertung() {
               <tr className="border-b border-zinc-100 dark:border-zinc-800">
                 <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Event</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider hidden sm:table-cell">Empfänger</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider hidden md:table-cell">Betreff / Details</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider hidden md:table-cell">Template / Details</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Zeitpunkt</th>
               </tr>
             </thead>
@@ -374,8 +388,8 @@ export function Auswertung() {
                     </p>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
-                    {ev.subject && (
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[260px]">{ev.subject}</p>
+                    {ev.template_id && templates[ev.template_id] && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[260px]">{templates[ev.template_id]}</p>
                     )}
                     {ev.url && (
                       <a
