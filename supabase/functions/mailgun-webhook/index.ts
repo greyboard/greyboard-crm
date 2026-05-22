@@ -56,7 +56,7 @@ serve(async (req: Request) => {
     const userVars     = (eventData["user-variables"] as Record<string, string>) ?? {};
     const leadId       = userVars.leadId ?? null;
     const templateId   = userVars.templateId ?? null;
-    const subject      = (eventData.message?.headers?.subject as string) ?? null;
+    const subjectFromEvent = (eventData.message?.headers?.subject as string) ?? null;
     const url          = eventData.url ?? null;
     const delivery     = eventData["delivery-status"] as Record<string, unknown> | undefined;
     const errorCode    = delivery?.code?.toString() ?? null;
@@ -65,6 +65,18 @@ serve(async (req: Request) => {
     const errorMessage = isError
       ? ((delivery?.message as string) ?? (delivery?.description as string) ?? null)
       : null;
+
+    // Betreff: aus Event-Headern oder per Lookup aus dem sent-Event
+    let subject = subjectFromEvent;
+    if (!subject && mailgunId) {
+      const { data: sentEvent } = await supabase
+        .from("email_events")
+        .select("subject")
+        .eq("mailgun_id", mailgunId)
+        .eq("event_type", "sent")
+        .maybeSingle();
+      subject = sentEvent?.subject ?? null;
+    }
 
     // Event in DB speichern
     const { error: insertError } = await supabase.from("email_events").insert({
