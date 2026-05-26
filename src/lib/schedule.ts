@@ -7,9 +7,20 @@ export const DAY_TO_JS: Record<string, number> = {
 export function buildSchedule(count: number, settings: Settings): Date[] {
   const sendDayNums = new Set(settings.sendDays.map(d => DAY_TO_JS[d]))
   const dates: Date[] = []
+
+  // Prüfen ob das heutige Zeitfenster (CEST) noch offen ist
+  const zurichHHMM = new Intl.DateTimeFormat('sv', {
+    timeZone: 'Europe/Zurich',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date())
+
   const cursor = new Date()
   cursor.setHours(0, 0, 0, 0)
-  cursor.setDate(cursor.getDate() + 1)
+  if (zurichHHMM >= settings.sendTimeTo) {
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
   while (dates.length < count) {
     if (sendDayNums.has(cursor.getDay())) {
       for (let i = 0; i < settings.dailyMax && dates.length < count; i++) {
