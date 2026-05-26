@@ -186,6 +186,7 @@ export function Queue() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [preview, setPreview] = useState<{ lead: Lead; template: EmailTemplate; scheduledDate: Date | null } | null>(null)
+  const [sentToday, setSentToday] = useState(0)
   const [sending, setSending] = useState<Record<string, 'idle' | 'confirm' | 'sending' | 'ok' | 'error'>>({})
   const [sendErrors, setSendErrors] = useState<Record<string, string>>({})
 
@@ -236,12 +237,19 @@ export function Queue() {
 
   async function load() {
     setLoading(true)
-    const [{ data: l }, { data: t }] = await Promise.all([
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
+    const [{ data: l }, { data: t }, { count: sent }] = await Promise.all([
       supabase.from('leads').select('*').eq('status', 'Validiert' as LeadStatus).order('company_name'),
       supabase.from('email_templates').select('*'),
+      supabase.from('email_events').select('id', { count: 'exact', head: true })
+        .eq('event_type', 'sent')
+        .gte('event_timestamp', todayStart.toISOString())
+        .lte('event_timestamp', todayEnd.toISOString()),
     ])
     setLeads((l ?? []) as Lead[])
     setTemplates((t ?? []) as EmailTemplate[])
+    setSentToday(sent ?? 0)
     setLoading(false)
   }
 
@@ -251,7 +259,7 @@ export function Queue() {
     const matched = leads.map(lead => ({ lead, ...matchTemplate(lead, templates) }))
     const withTpl    = matched.filter(r => r.matchType !== 'none')
     const withoutTpl = matched.filter(r => r.matchType === 'none')
-    const schedule   = buildSchedule(withTpl.length, settings)
+    const schedule   = buildSchedule(withTpl.length, settings, sentToday)
     return [
       ...withTpl.map((r, i) => ({ ...r, scheduledDate: schedule[i] ?? null })),
       ...withoutTpl.map(r => ({ ...r, scheduledDate: null })),

@@ -72,9 +72,9 @@ export function Dashboard() {
 
   const queueEndDate = useMemo(() => {
     if (!validatedCount) return null
-    const schedule = buildSchedule(validatedCount, settings)
+    const schedule = buildSchedule(validatedCount, settings, todaySent)
     return schedule[schedule.length - 1] ?? null
-  }, [validatedCount, settings])
+  }, [validatedCount, settings, todaySent])
 
   return (
     <div className="flex flex-col gap-6">
