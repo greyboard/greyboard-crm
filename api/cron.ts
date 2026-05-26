@@ -12,10 +12,10 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  if (!supabaseUrl || !cronSecret) {
+  const supabaseUrl = process.env.SUPABASE_URL ?? "https://hgwnmpuequgrqxewpvaw.supabase.co";
+  if (!cronSecret) {
     return new Response(
-      JSON.stringify({ error: "SUPABASE_URL oder CRON_SECRET fehlt" }),
+      JSON.stringify({ error: "CRON_SECRET fehlt" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

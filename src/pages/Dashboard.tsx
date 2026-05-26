@@ -10,14 +10,13 @@ import { Lead, NewLead } from '../types/lead'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { buildSchedule } from '../lib/schedule'
 
-const TODAY_SENT = 0
-
 export function Dashboard() {
   usePageTitle()
   const { settings } = useSettings()
   const [leads, setLeads]               = useState<Lead[]>([])
   const [validatedCount, setValidatedCount] = useState(0)
   const [monthCount, setMonthCount]     = useState(0)
+  const [todaySent, setTodaySent]       = useState(0)
   const [loading, setLoading]           = useState(true)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [filterCountry, setFilterCountry]   = useState('LI')
@@ -33,16 +32,24 @@ export function Dashboard() {
     if (filterIndustry) q = q.eq('industry', filterIndustry)
     q = q.limit(10)
 
-    const [{ data }, { count: validated }, { count: month }] = await Promise.all([
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
+
+    const [{ data }, { count: validated }, { count: month }, { count: sent }] = await Promise.all([
       q,
       supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'Validiert'),
       supabase.from('leads').select('*', { count: 'exact', head: true })
         .in('status', ['Kontaktiert', 'Kontaktversuch', 'Antwort erhalten'])
         .gte('last_action_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+      supabase.from('email_events').select('id', { count: 'exact', head: true })
+        .eq('event_type', 'sent')
+        .gte('event_timestamp', todayStart.toISOString())
+        .lte('event_timestamp', todayEnd.toISOString()),
     ])
     setLeads((data as Lead[]) ?? [])
     setValidatedCount(validated ?? 0)
     setMonthCount(month ?? 0)
+    setTodaySent(sent ?? 0)
     setLoading(false)
   }, [filterCountry, filterIndustry])
 
@@ -84,9 +91,9 @@ export function Dashboard() {
         />
         <KpiCard
           label="Heute gesendet"
-          value={`${TODAY_SENT} / ${settings.dailyMax}`}
-          subtext={TODAY_SENT >= settings.dailyMax ? 'Tageslimit erreicht' : `Noch ${settings.dailyMax - TODAY_SENT} möglich`}
-          accent={TODAY_SENT >= settings.dailyMax ? 'orange' : 'default'}
+          value={loading ? '...' : `${todaySent} / ${settings.dailyMax}`}
+          subtext={todaySent >= settings.dailyMax ? 'Tageslimit erreicht' : `Noch ${settings.dailyMax - todaySent} möglich`}
+          accent={todaySent >= settings.dailyMax ? 'orange' : 'default'}
         />
         <KpiCard
           label="Diesen Monat kontaktiert"
