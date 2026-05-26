@@ -18,6 +18,7 @@ export interface Lead {
   country?: string | null
   icebreaker: string | null
   status: LeadStatus
+  scheduled_date?: string | null
   last_action_at: string
   ghl_id?: string | null
   ghl_date_added?: string | null

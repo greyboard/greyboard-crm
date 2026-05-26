@@ -240,7 +240,9 @@ export function Queue() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
     const [{ data: l }, { data: t }, { count: sent }] = await Promise.all([
-      supabase.from('leads').select('*').eq('status', 'Validiert' as LeadStatus).order('company_name'),
+      supabase.from('leads').select('*').eq('status', 'Validiert' as LeadStatus)
+        .order('scheduled_date', { ascending: true, nullsFirst: true })
+        .order('created_at', { ascending: true }),
       supabase.from('email_templates').select('*'),
       supabase.from('email_events').select('id', { count: 'exact', head: true })
         .eq('event_type', 'sent')
@@ -259,12 +261,22 @@ export function Queue() {
     const matched = leads.map(lead => ({ lead, ...matchTemplate(lead, templates) }))
     const withTpl    = matched.filter(r => r.matchType !== 'none')
     const withoutTpl = matched.filter(r => r.matchType === 'none')
-    const schedule   = buildSchedule(withTpl.length, settings, sentToday)
+
+    // Leads ohne scheduled_date (Altbestand) bekommen Fallback-Datum via buildSchedule
+    const fallbackLeads = withTpl.filter(r => !r.lead.scheduled_date)
+    const fallbackSchedule = buildSchedule(fallbackLeads.length, settings, sentToday)
+    let fallbackIdx = 0
+
     return [
-      ...withTpl.map((r, i) => ({ ...r, scheduledDate: schedule[i] ?? null })),
+      ...withTpl.map(r => {
+        const scheduledDate = r.lead.scheduled_date
+          ? new Date(r.lead.scheduled_date + 'T12:00:00')
+          : (fallbackSchedule[fallbackIdx++] ?? null)
+        return { ...r, scheduledDate }
+      }),
       ...withoutTpl.map(r => ({ ...r, scheduledDate: null })),
     ]
-  }, [leads, templates, settings])
+  }, [leads, templates, settings, sentToday])
 
   const withTemplate    = rows.filter(r => r.matchType !== 'none')
   const withoutTemplate = rows.filter(r => r.matchType === 'none')

@@ -242,6 +242,8 @@ serve(async (req: Request) => {
         )
         .eq("status", "Validiert")
         .not("email", "is", null)
+        .or(`scheduled_date.is.null,scheduled_date.lte.${dateStr}`)
+        .order("scheduled_date", { ascending: true, nullsFirst: true })
         .order("created_at", { ascending: true })
         .limit(remaining),
       supabase

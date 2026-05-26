@@ -1,5 +1,12 @@
 import { Settings } from '../hooks/useSettings'
 
+// Gibt das Versanddatum (YYYY-MM-DD) für den Lead an Position queueLength (0-basiert).
+export function calcScheduledDate(queueLength: number, settings: Settings, sentToday: number): string {
+  const schedule = buildSchedule(queueLength + 1, settings, sentToday)
+  const date = schedule[queueLength] ?? schedule[schedule.length - 1] ?? new Date()
+  return date.toISOString().split('T')[0]
+}
+
 export const DAY_TO_JS: Record<string, number> = {
   Mo: 1, Di: 2, Mi: 3, Do: 4, Fr: 5, Sa: 6, So: 0,
 }

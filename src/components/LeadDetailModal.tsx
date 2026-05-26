@@ -6,6 +6,8 @@ import {
 import { Lead, LeadStatus } from '../types/lead'
 import { supabase } from '../lib/supabase'
 import { StatusBadge, StatusSelect } from './StatusSelect'
+import { useSettings } from '../hooks/useSettings'
+import { calcScheduledDate } from '../lib/schedule'
 
 interface LeadDetailModalProps {
   lead: Lead | null
@@ -17,6 +19,7 @@ const inputCls = 'w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark
 const labelCls = 'text-xs text-zinc-400 dark:text-zinc-500 mb-1'
 
 export function LeadDetailModal({ lead, onClose, onUpdate }: LeadDetailModalProps) {
+  const { settings } = useSettings()
   const [isEditing, setIsEditing]   = useState(false)
   const [draft, setDraft]           = useState<Partial<Lead>>({})
   const [saving, setSaving]         = useState(false)
@@ -54,9 +57,22 @@ export function LeadDetailModal({ lead, onClose, onUpdate }: LeadDetailModalProp
     if (!lead) return
     setSaving(true)
     setSaveError(null)
-    const payload = {
+    const payload: Partial<Lead> = {
       ...draft,
       full_name: [draft.first_name, draft.last_name].filter(Boolean).join(' ') || draft.full_name || null,
+    }
+    // scheduled_date berechnen wenn Status erstmals auf Validiert wechselt
+    if (draft.status === 'Validiert' && lead.status !== 'Validiert') {
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+      const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
+      const [{ count: queueLen }, { count: sentCount }] = await Promise.all([
+        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'Validiert'),
+        supabase.from('email_events').select('id', { count: 'exact', head: true })
+          .eq('event_type', 'sent')
+          .gte('event_timestamp', todayStart.toISOString())
+          .lte('event_timestamp', todayEnd.toISOString()),
+      ])
+      payload.scheduled_date = calcScheduledDate(queueLen ?? 0, settings, sentCount ?? 0)
     }
     const { data, error } = await supabase
       .from('leads')

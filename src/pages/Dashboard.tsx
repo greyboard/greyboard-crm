@@ -8,7 +8,7 @@ import { PipelineTable } from '../components/PipelineTable'
 import { LeadDetailModal } from '../components/LeadDetailModal'
 import { Lead, NewLead } from '../types/lead'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { buildSchedule } from '../lib/schedule'
+import { buildSchedule, calcScheduledDate } from '../lib/schedule'
 
 export function Dashboard() {
   usePageTitle()
@@ -64,7 +64,11 @@ export function Dashboard() {
   }, [])
 
   async function handleNewLead(data: NewLead) {
-    const { data: inserted, error } = await supabase.from('leads').insert([data]).select().single()
+    const payload = { ...data }
+    if (data.status === 'Validiert') {
+      payload.scheduled_date = calcScheduledDate(validatedCount, settings, todaySent)
+    }
+    const { data: inserted, error } = await supabase.from('leads').insert([payload]).select().single()
     if (error) throw new Error(error.message)
     setLeads(prev => [inserted as Lead, ...prev].slice(0, 10))
     if (data.status === 'Validiert') setValidatedCount(prev => prev + 1)
