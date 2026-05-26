@@ -35,15 +35,16 @@ interface Template {
 }
 
 type Range = '7d' | '30d' | 'all'
-type FilterKey = 'sent' | 'delivered' | 'opened' | 'clicked' | 'failed' | 'spam'
+type FilterKey = 'sent' | 'delivered' | 'opened' | 'clicked' | 'failed' | 'spam' | 'unsubscribed'
 
 const FILTER_TYPES: Record<FilterKey, string[]> = {
-  sent:      ['sent'],
-  delivered: ['delivered'],
-  opened:    ['opened'],
-  clicked:   ['clicked'],
-  failed:    ['failed', 'permanent_fail', 'temporary_fail'],
-  spam:      ['complained'],
+  sent:         ['sent'],
+  delivered:    ['delivered'],
+  opened:       ['opened'],
+  clicked:      ['clicked'],
+  failed:       ['failed', 'permanent_fail', 'temporary_fail'],
+  spam:         ['complained'],
+  unsubscribed: ['unsubscribed'],
 }
 
 const RANGE_LABELS: Record<Range, string> = { '7d': '7 Tage', '30d': '30 Tage', 'all': 'Alle' }
@@ -179,21 +180,23 @@ export function Auswertung() {
     const uniqueBy = (evts: EmailEvent[]) =>
       new Set(evts.map(e => e.mailgun_id).filter(Boolean)).size
 
-    const sent      = byType('sent')
-    const delivered = byType('delivered')
-    const opened    = byType('opened')
-    const clicked   = byType('clicked')
-    const failed    = byType(['failed', 'permanent_fail', 'temporary_fail'])
-    const spam      = byType('complained')
+    const sent         = byType('sent')
+    const delivered    = byType('delivered')
+    const opened       = byType('opened')
+    const clicked      = byType('clicked')
+    const failed       = byType(['failed', 'permanent_fail', 'temporary_fail'])
+    const spam         = byType('complained')
+    const unsubscribed = byType('unsubscribed')
 
-    const sentCount      = sent.length
-    const deliveredCount = uniqueBy(delivered)
-    const openedCount    = uniqueBy(opened)
-    const clickedCount   = uniqueBy(clicked)
-    const failedCount    = uniqueBy(failed)
-    const spamCount      = spam.length
+    const sentCount         = sent.length
+    const deliveredCount    = uniqueBy(delivered)
+    const openedCount       = uniqueBy(opened)
+    const clickedCount      = uniqueBy(clicked)
+    const failedCount       = uniqueBy(failed)
+    const spamCount         = spam.length
+    const unsubscribedCount = unsubscribed.length
 
-    return { sentCount, deliveredCount, openedCount, clickedCount, failedCount, spamCount }
+    return { sentCount, deliveredCount, openedCount, clickedCount, failedCount, spamCount, unsubscribedCount }
   }, [events])
 
   const filteredEvents = useMemo(() => {
@@ -241,19 +244,21 @@ export function Auswertung() {
       </div>
 
       {/* KPI-Karten */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard icon={Send}          label="Gesendet"    value={stats.sentCount}      color="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
-          active={activeFilter === 'sent'}      onClick={() => toggleFilter('sent')} />
-        <KpiCard icon={CheckCircle2}  label="Zugestellt"  value={stats.deliveredCount} color="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-          sub={pct(stats.deliveredCount, stats.sentCount)} active={activeFilter === 'delivered'} onClick={() => toggleFilter('delivered')} />
-        <KpiCard icon={Eye}           label="Geöffnet"    value={stats.openedCount}    color="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-          sub={pct(stats.openedCount, stats.sentCount)}    active={activeFilter === 'opened'}    onClick={() => toggleFilter('opened')} />
-        <KpiCard icon={MousePointer2} label="Geklickt"    value={stats.clickedCount}   color="bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400"
-          sub={pct(stats.clickedCount, stats.sentCount)}   active={activeFilter === 'clicked'}   onClick={() => toggleFilter('clicked')} />
-        <KpiCard icon={XCircle}       label="Bounce"      value={stats.failedCount}    color="bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-          sub={pct(stats.failedCount, stats.sentCount)}    active={activeFilter === 'failed'}    onClick={() => toggleFilter('failed')} />
-        <KpiCard icon={AlertTriangle} label="Spam"        value={stats.spamCount}      color="bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400"
-          sub={pct(stats.spamCount, stats.sentCount)}      active={activeFilter === 'spam'}      onClick={() => toggleFilter('spam')} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        <KpiCard icon={Send}          label="Gesendet"    value={stats.sentCount}           color="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
+          active={activeFilter === 'sent'}         onClick={() => toggleFilter('sent')} />
+        <KpiCard icon={CheckCircle2}  label="Zugestellt"  value={stats.deliveredCount}      color="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+          sub={pct(stats.deliveredCount, stats.sentCount)}    active={activeFilter === 'delivered'}    onClick={() => toggleFilter('delivered')} />
+        <KpiCard icon={Eye}           label="Geöffnet"    value={stats.openedCount}         color="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+          sub={pct(stats.openedCount, stats.sentCount)}       active={activeFilter === 'opened'}       onClick={() => toggleFilter('opened')} />
+        <KpiCard icon={MousePointer2} label="Geklickt"    value={stats.clickedCount}        color="bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400"
+          sub={pct(stats.clickedCount, stats.sentCount)}      active={activeFilter === 'clicked'}      onClick={() => toggleFilter('clicked')} />
+        <KpiCard icon={XCircle}       label="Bounce"      value={stats.failedCount}         color="bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+          sub={pct(stats.failedCount, stats.sentCount)}       active={activeFilter === 'failed'}       onClick={() => toggleFilter('failed')} />
+        <KpiCard icon={AlertTriangle} label="Spam"        value={stats.spamCount}           color="bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400"
+          sub={pct(stats.spamCount, stats.sentCount)}         active={activeFilter === 'spam'}         onClick={() => toggleFilter('spam')} />
+        <KpiCard icon={XCircle}       label="Abgemeldet"  value={stats.unsubscribedCount}   color="bg-zinc-100 dark:bg-zinc-700/60 text-zinc-500 dark:text-zinc-400"
+          sub={pct(stats.unsubscribedCount, stats.sentCount)} active={activeFilter === 'unsubscribed'} onClick={() => toggleFilter('unsubscribed')} />
       </div>
 
       {/* Kontakte-Panel für aktiven Filter */}
