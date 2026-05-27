@@ -245,7 +245,7 @@ serve(async (req: Request) => {
         .or(`scheduled_date.is.null,scheduled_date.lte.${dateStr}`)
         .order("scheduled_date", { ascending: true, nullsFirst: true })
         .order("created_at", { ascending: true })
-        .limit(remaining),
+        .limit(remaining * 10),
       supabase
         .from("email_templates")
         .select("id,name,subject,body,pre_header,country,industry"),
@@ -271,6 +271,8 @@ serve(async (req: Request) => {
     let skipped = 0;
 
     for (const lead of leads) {
+      if (sent >= remaining) break;
+
       const template = matchTemplate(lead, templates);
 
       if (!template) {
